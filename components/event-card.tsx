@@ -9,6 +9,7 @@ interface EventCardProps {
   capacity: number
   status: "OPEN" | "CLOSED" | "LIVE" | "PUBLISHED" | "DRAFT"
   eventType?: "closed" | "open"
+  onStatusClick?: (e: React.MouseEvent) => void
   className?: string
 }
 
@@ -20,110 +21,119 @@ export function EventCard({
   capacity,
   status,
   eventType = 'closed',
+  onStatusClick,
   className,
 }: EventCardProps) {
   const percentage = Math.min((guestCount / capacity) * 100, 100)
 
-  const statusColors: Record<string, string> = {
-    LIVE:      "bg-admitted text-void",
-    PUBLISHED: "bg-signal text-void",
-    DRAFT:     "bg-foreground/15 text-foreground/60",
-    OPEN:      "bg-signal text-void",
-    CLOSED:    "bg-denied text-void",
+  const statusConfig: Record<string, { cls: string; label: string }> = {
+    LIVE:      { cls: "status-live",      label: "Live" },
+    PUBLISHED: { cls: "status-published", label: "Published" },
+    DRAFT:     { cls: "status-draft",     label: "Draft" },
+    OPEN:      { cls: "status-open",      label: "Open" },
+    CLOSED:    { cls: "status-ended",     label: "Closed" },
   }
 
+  const { cls, label } = statusConfig[status] ?? statusConfig.DRAFT
+  const manifestNum = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 9000 + 1000
+
   return (
-    <div
-      className={cn(
-        "relative w-full border-2 border-foreground bg-background flex overflow-hidden rounded-none",
-        className
-      )}
-    >
-      {/* Physical Boarding Pass Left Edge */}
-      <div className="w-2 md:w-3 bg-signal shrink-0" />
+    <div className={cn(
+      "relative w-full bg-card border border-border overflow-hidden flex hover:border-copper/40 transition-colors duration-200 group",
+      className
+    )}>
+      {/* Copper left accent */}
+      <div className="w-1 shrink-0 bg-copper opacity-60 group-hover:opacity-100 transition-opacity" />
 
-      {/* Main Stub Content */}
-      <div className="flex-1 flex flex-col divide-y-2 divide-foreground/20">
-        {/* Top Section: Event Identity */}
-        <div className="p-5 flex flex-col gap-1">
-          <div className="flex justify-between items-start">
-            <h2 className="font-display text-4xl md:text-5xl uppercase leading-[0.8] tracking-tighter text-foreground">
-              {name}
-            </h2>
-            {eventType === 'open' && (
-              <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest px-2 py-1 border border-signal/40 text-signal shrink-0 ml-3">
-                <Globe className="h-3 w-3" />
-                OPEN
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="font-mono text-[10px] md:text-xs uppercase tracking-[0.2em] text-foreground/80 border border-foreground/40 px-2 py-0.5">
-              MANIFEST NO. {name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 9000 + 1000}
-            </span>
-            <span className="font-mono text-[10px] md:text-xs uppercase tracking-[0.2em] text-foreground/80">
-              {date} // {time}
-            </span>
-          </div>
-        </div>
+      {/* Ticket body */}
+      <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Middle: The Tear Line */}
-        <div className="relative py-3 px-5 bg-background flex items-center">
-          <div className="border-t-2 border-dashed border-foreground/30 w-full h-0" />
-          <div className="absolute -left-1 w-2 h-2 bg-foreground rotate-45" />
-          <div className="absolute -right-1 w-2 h-2 bg-foreground rotate-45" />
-        </div>
-
-        {/* Bottom Strip: Metrics & Status */}
-        <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-8">
-            {/* Guest Metrics */}
-            <div className="flex flex-col">
-              <span className="font-mono text-[10px] uppercase text-foreground/70 mb-1">
-                GUEST_COUNT
-              </span>
-              <div className="flex items-baseline gap-1">
-                <span className="font-display text-3xl text-foreground leading-none">
-                  {guestCount.toString().padStart(3, "0")}
+        {/* Top: identity */}
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex items-start gap-4">
+            {/* Name + meta — takes all space EXCEPT status */}
+            <div className="flex-1 min-w-0 pr-2">
+              <h2
+                className="font-display font-semibold leading-tight text-foreground truncate"
+                style={{ fontSize: 'clamp(20px, 2.5vw, 28px)' }}
+              >
+                {name}
+              </h2>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className="font-sans text-[10px] uppercase tracking-[0.15em] text-muted-foreground border border-border px-2 py-0.5">
+                  #{manifestNum}
                 </span>
-                <span className="font-mono text-xs text-foreground/60">
-                  / {capacity}
+                <span className="font-sans text-[10px] text-muted-foreground">
+                  {date} {time && `· ${time}`}
                 </span>
+                {eventType === 'open' && (
+                  <span className="flex items-center gap-1 font-sans text-[9px] uppercase tracking-widest text-copper border border-copper/30 px-2 py-0.5">
+                    <Globe className="h-2.5 w-2.5" />
+                    Open
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Capacity Visualizer */}
-            <div className="flex flex-col gap-1.5 flex-1 min-w-30">
-              <span className="font-mono text-[10px] uppercase text-foreground/70">
-                CAPACITY_LOAD
-              </span>
-              <div className="w-full h-5 border-2 border-foreground/40 bg-background relative p-0.5">
-                <div
-                  className="h-full bg-signal transition-all duration-500"
-                  style={{ width: `${percentage}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Status Badge */}
-          <div
-            className={cn(
-              "font-display text-2xl px-6 py-2 leading-none inline-flex items-center justify-center uppercase",
-              statusColors[status]
+            {/* Status badge — clickable if handler provided, positioned safely away from delete button */}
+            {onStatusClick ? (
+              <button
+                onClick={onStatusClick}
+                className={cn(
+                  "shrink-0 mt-0.5 cursor-pointer hover:opacity-75 transition-opacity",
+                  cls
+                )}
+                title="Click to change status"
+                aria-label={`Status: ${label} — click to change`}
+              >
+                {label}
+              </button>
+            ) : (
+              <span className={cn("shrink-0 mt-0.5", cls)}>{label}</span>
             )}
-          >
-            {status}
           </div>
         </div>
 
-        {/* Fine Print Footer (Ledger Style) */}
-        <div className="px-5 py-2 flex justify-between border-t border-foreground/20">
-          <span className="font-mono text-[8px] uppercase text-foreground/50">
-            GATEKEEP_ENTRY_SYSTEM // ENCRYPTION_ACTIVE
+        {/* Perforated divider */}
+        <div className="relative mx-4">
+          <div className="border-t border-dashed border-border" />
+          <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-background" />
+          <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-background" />
+        </div>
+
+        {/* Bottom: metrics */}
+        <div className="px-5 py-4 flex items-center gap-8">
+          <div>
+            <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-muted-foreground mb-1">Guests</p>
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-2xl font-semibold text-foreground leading-none">
+                {guestCount.toString().padStart(3, '0')}
+              </span>
+              <span className="font-sans text-xs text-muted-foreground">/ {capacity}</span>
+            </div>
+          </div>
+
+          <div className="flex-1">
+            <div className="flex justify-between mb-1.5">
+              <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Capacity</p>
+              <p className="font-sans text-[9px] text-muted-foreground">{Math.round(percentage)}%</p>
+            </div>
+            <div className="w-full h-1 bg-muted">
+              <div
+                className="h-full bg-copper transition-all duration-700"
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Fine print */}
+        <div className="px-5 py-2 border-t border-border flex justify-between">
+          <span className="font-sans text-[8px] uppercase tracking-[0.15em] text-muted-foreground/40">
+            Crenelle · Entry System
           </span>
-          <span className="font-mono text-[8px] uppercase text-foreground/50">
-            © 2026_GATEKEEP_CORP
+          <span className="font-sans text-[8px] uppercase tracking-[0.15em] text-muted-foreground/40">
+            Encrypted
           </span>
         </div>
       </div>

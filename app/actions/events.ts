@@ -93,3 +93,19 @@ export async function deleteEvent(id: string) {
   revalidatePath('/events')
   redirect('/events')
 }
+
+/** Lightweight status-only update — used from the quick-change status pill on event cards */
+export async function updateEventStatus(id: string, status: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('events')
+    .update({ status })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/events')
+  revalidatePath(`/events/${id}`)
+  return { success: true }
+}

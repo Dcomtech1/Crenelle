@@ -4,18 +4,18 @@ import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 
 const baseTabs = [
-  { label: 'Overview', href: '' },
-  { label: 'Guests', href: '/guests' },
-  { label: 'Entry Cards', href: '/cards' },
+  { label: 'Overview',      href: '' },
+  { label: 'Guests',        href: '/guests' },
+  { label: 'Entry Cards',   href: '/cards' },
   { label: 'Scanner Links', href: '/scanner-links' },
-  { label: 'Live Dashboard', href: '/dashboard' },
+  { label: 'Live Dashboard',href: '/dashboard' },
 ]
 
-const statusMap: Record<string, { label: string; cls: string }> = {
-  live:      { label: 'LIVE',      cls: 'status-admitted' },
-  published: { label: 'PUBLISHED', cls: 'status-pending' },
-  draft:     { label: 'DRAFT',     cls: 'bg-foreground/10 text-foreground/60' },
-  ended:     { label: 'ENDED',     cls: 'status-denied' },
+const statusConfig: Record<string, { label: string; cls: string }> = {
+  live:      { label: 'Live',      cls: 'status-live' },
+  published: { label: 'Published', cls: 'status-published' },
+  draft:     { label: 'Draft',     cls: 'status-draft' },
+  ended:     { label: 'Ended',     cls: 'status-ended' },
 }
 
 export default async function EventLayout({
@@ -36,12 +36,10 @@ export default async function EventLayout({
 
   if (!event) notFound()
 
-  const statusInfo = statusMap[event.status] ?? { label: event.status.toUpperCase(), cls: '' }
+  const statusInfo = statusConfig[event.status] ?? { label: event.status, cls: 'status-draft' }
 
-  // Build tabs based on event type
   const tabs = [...baseTabs]
   if (event.event_type === 'open') {
-    // Insert Registrations tab after Overview
     tabs.splice(1, 0, { label: 'Registrations', href: '/registrations' })
   }
 
@@ -50,59 +48,54 @@ export default async function EventLayout({
       {/* Back link */}
       <Link
         href="/events"
-        className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-foreground/70 hover:text-signal transition-colors mb-8 group"
+        className="inline-flex items-center gap-2 font-sans text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground transition-colors mb-8 group"
       >
         <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-1 transition-transform" aria-hidden="true" />
-        All Events
+        All events
       </Link>
 
       {/* Event heading */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 border-b-2 border-foreground/20 pb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 pb-6 border-b border-border">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="font-display text-5xl md:text-6xl uppercase leading-none tracking-tighter text-foreground">
-              {event.name}
-            </h1>
-          </div>
+          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.28em] text-copper mb-3">
+            Event
+          </p>
+          <h1
+            className="font-display font-semibold text-foreground leading-[0.95] tracking-tight"
+            style={{ fontSize: 'clamp(28px, 5vw, 52px)' }}
+          >
+            {event.name}
+          </h1>
           <div className="flex items-center gap-3 mt-2">
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-foreground/70">
+            <p className="font-sans text-sm text-muted-foreground">
               {new Date(event.date).toLocaleDateString('en-GB', {
                 weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
               })}
             </p>
             {event.event_type === 'open' && (
-              <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-signal/40 text-signal">
-                OPEN EVENT
+              <span className="font-sans text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 border border-copper/40 text-copper">
+                Open event
               </span>
             )}
           </div>
         </div>
 
-        <div
-          className={`font-display text-xl px-5 py-2 inline-flex items-center gap-2 justify-center uppercase self-start sm:self-end shrink-0 ${statusInfo.cls}`}
-          aria-label={`Event status: ${statusInfo.label}`}
-        >
+        <div className={`inline-flex items-center gap-2 self-start sm:self-end shrink-0 ${statusInfo.cls}`}>
           {event.status === 'live' && (
-            <span className="size-2 rounded-full bg-current animate-blink shrink-0" aria-hidden="true" />
+            <span className="size-1.5 rounded-full bg-current animate-blink shrink-0" aria-hidden="true" />
           )}
           {statusInfo.label}
         </div>
       </div>
 
       {/* Tab navigation */}
-      <nav aria-label="Event sections" className="mb-8">
-        <div className="flex gap-0 border-b-2 border-foreground/20 overflow-x-auto overflow-y-hidden">
+      <nav aria-label="Event sections" className="mb-10">
+        <div className="flex gap-0 border-b border-border overflow-x-auto">
           {tabs.map((tab) => (
             <Link
               key={tab.label}
               href={`/events/${id}${tab.href}`}
-              className="
-               relative font-mono text-xs uppercase tracking-widest px-5 py-3 whitespace-nowrap
-                text-foreground/70 hover:text-foreground transition-colors
-                border-b-2 border-transparent -mb-0.5
-                hover:border-foreground/60
-                focus-visible:outline-none focus-visible:text-signal focus-visible:border-signal
-              "
+              className="relative font-sans text-xs font-semibold uppercase tracking-[0.14em] px-5 py-3 whitespace-nowrap text-muted-foreground hover:text-foreground transition-colors border-b-2 border-transparent -mb-px hover:border-foreground/30 focus-visible:outline-none focus-visible:text-copper focus-visible:border-copper"
             >
               {tab.label}
             </Link>
@@ -114,4 +107,3 @@ export default async function EventLayout({
     </div>
   )
 }
-

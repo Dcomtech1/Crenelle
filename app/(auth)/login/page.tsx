@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { login } from '@/app/actions/auth'
-import { Button } from '@/components/ui/button'
 import { loginSchema } from '@/lib/validations/auth'
 import { ZodError } from 'zod'
 
@@ -14,23 +13,16 @@ export default function LoginPage() {
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
-
     try {
-      // Client-side validation
       const data = Object.fromEntries(formData.entries())
       loginSchema.parse(data)
-
       const result = await login(formData)
       if (result?.error) {
         setError(result.error)
         setLoading(false)
       }
     } catch (err) {
-      if (err instanceof ZodError) {
-        setError(err.issues[0].message)
-      } else {
-        setError('An unexpected error occurred')
-      }
+      setError(err instanceof ZodError ? err.issues[0].message : 'An unexpected error occurred')
       setLoading(false)
     }
   }
@@ -39,31 +31,31 @@ export default function LoginPage() {
     <div className="w-full">
       {/* Header */}
       <div className="mb-10">
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-signal mb-3">
-          SYSTEM_ACCESS // ORGANIZER_LOGIN
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.3em] text-copper mb-4">
+          Organizer access
         </p>
-        <h1 className="font-display text-5xl uppercase text-foreground leading-none">
-          Sign In
+        <h1 className="font-display text-4xl font-semibold text-foreground leading-tight tracking-tight">
+          Welcome back.
         </h1>
+        <p className="font-sans text-sm text-muted-foreground mt-2">
+          Sign in to manage your events and guests.
+        </p>
       </div>
 
-      <form action={handleSubmit} className="flex flex-col gap-6" noValidate>
+      <form action={handleSubmit} className="flex flex-col gap-5" noValidate>
         {error && (
           <div
             role="alert"
             aria-live="assertive"
-            className="border-2 border-denied bg-denied/10 p-4 font-mono text-sm text-denied uppercase tracking-wide"
+            className="border-l-2 border-destructive bg-destructive/10 px-4 py-3 font-sans text-xs text-foreground/80 leading-relaxed"
           >
-            ⚠ {error}
+            {error}
           </div>
         )}
 
         <div className="flex flex-col gap-2">
-          <label
-            htmlFor="login-email"
-            className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/80"
-          >
-            Email Address
+          <label htmlFor="login-email" className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Email address
           </label>
           <input
             id="login-email"
@@ -72,15 +64,12 @@ export default function LoginPage() {
             autoComplete="email"
             required
             placeholder="you@example.com"
-            className="w-full bg-secondary border-2 border-foreground/40 text-foreground font-mono text-sm px-4 py-3 placeholder:text-foreground/40 focus:outline-none focus:border-signal transition-colors"
+            className="w-full bg-muted border border-border text-foreground font-sans text-sm px-4 py-3 placeholder:text-muted-foreground/50 focus:outline-none focus:border-copper transition-colors"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <label
-            htmlFor="login-password"
-            className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/80"
-          >
+          <label htmlFor="login-password" className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Password
           </label>
           <input
@@ -90,24 +79,23 @@ export default function LoginPage() {
             autoComplete="current-password"
             required
             placeholder="••••••••"
-            className="w-full bg-secondary border-2 border-foreground/40 text-foreground font-mono text-sm px-4 py-3 placeholder:text-foreground/40 focus:outline-none focus:border-signal transition-colors"
+            className="w-full bg-muted border border-border text-foreground font-sans text-sm px-4 py-3 placeholder:text-muted-foreground/50 focus:outline-none focus:border-copper transition-colors"
           />
         </div>
 
-        <Button
+        {/* bg-foreground text-background = correct inversion in both modes */}
+        <button
           type="submit"
-          variant="signal"
-          size="lg"
           disabled={loading}
-          className="w-full h-14 text-xl mt-2"
+          className="mt-2 w-full bg-foreground text-background font-sans text-sm font-semibold uppercase tracking-[0.14em] py-4 hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
-          {loading ? 'VERIFYING...' : 'ACCESS SYSTEM →'}
-        </Button>
+          {loading ? 'Verifying...' : 'Sign in →'}
+        </button>
       </form>
 
-      <p className="font-mono text-xs text-foreground/60 uppercase tracking-widest mt-8 text-center">
+      <p className="font-sans text-xs text-muted-foreground mt-8 text-center">
         No account?{' '}
-        <Link href="/signup" className="text-signal hover:text-foreground transition-colors underline underline-offset-4">
+        <Link href="/signup" className="text-copper hover:text-copper underline underline-offset-4 transition-opacity hover:opacity-80">
           Create one
         </Link>
       </p>

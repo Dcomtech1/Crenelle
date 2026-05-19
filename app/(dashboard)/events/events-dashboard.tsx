@@ -5,12 +5,11 @@ import Link from "next/link"
 import { Trash2 } from "lucide-react"
 import { EventCard } from "@/components/event-card"
 import { DeleteEventDialog } from "@/components/delete-event-dialog"
+import { StatusChangeDialog } from "@/components/status-change-dialog"
 import { EmptyState } from "@/components/empty-state"
-import { Button } from "@/components/ui/button"
 import { deleteEvent } from "@/app/actions/events"
 import type { Event, Invitation } from "@/lib/types"
 
-// Hooks & Components
 import { useDashboardData } from "./hooks/use-dashboard-data"
 import { StatsPanel } from "./components/stats-panel"
 import { ControlBar } from "./components/control-bar"
@@ -27,28 +26,39 @@ export function EventsDashboardClient({
   initialInvitations,
   initialLogs,
 }: EventsDashboardClientProps) {
-  // 1. Data & Stats (Hook)
-  const {
-    events,
-    eventStats,
-    stats,
-    remaining,
-    capacityPercent
-  } = useDashboardData({ initialEvents, initialInvitations, initialLogs })
+  const { events, eventStats, stats, remaining, capacityPercent } =
+    useDashboardData({ initialEvents, initialInvitations, initialLogs })
 
-  // 2. Interaction State
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null)
+  const [statusTarget, setStatusTarget] = useState<Event | null>(null)
   const [filter, setFilter] = useState<string>("all")
   const [sortBy, setSortBy] = useState<"updated" | "created" | "name">("updated")
   const [search, setSearch] = useState("")
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [isPending, startTransition] = useTransition()
 
+  const filtered = [...events]
+    .filter((e) => {
+      if (search) {
+        const s = search.toLowerCase()
+        return e.name.toLowerCase().includes(s) || e.venue.toLowerCase().includes(s)
+      }
+      if (filter === "all") return true
+      if (filter === "active") return e.status === "live"
+      if (filter === "closed") return e.status === "ended"
+      return e.status === filter
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name)
+      if (sortBy === "created") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    })
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-      {/* Left: Events List */}
+      {/* Events list */}
       <div className="lg:col-span-7 flex flex-col gap-6">
-        <EventsHeader 
+        <EventsHeader
           isSearchExpanded={isSearchExpanded}
           setIsSearchExpanded={setIsSearchExpanded}
           search={search}
@@ -56,73 +66,62 @@ export function EventsDashboardClient({
         />
 
         {events.length === 0 ? (
-          <EmptyState
-            title="NO_DATA_AVAILABLE"
-            action={
-              <Link href="/events/new">
-                <Button variant="ghost">INITIALIZE_FIRST_EVENT</Button>
-              </Link>
-            }
-            className="p-12 bg-background"
-          />
+          <div className="py-16 text-center border border-border">
+            <p className="font-display text-xl text-muted-foreground italic mb-4">No events yet</p>
+            <Link
+              href="/events/new"
+              className="font-sans text-sm text-copper underline underline-offset-4 hover:opacity-80 transition-opacity"
+            >
+              Create your first event →
+            </Link>
+          </div>
         ) : (
           <>
-            <ControlBar 
-              filter={filter} 
-              setFilter={setFilter} 
-              sortBy={sortBy} 
-              setSortBy={setSortBy} 
-            />
+            <ControlBar filter={filter} setFilter={setFilter} sortBy={sortBy} setSortBy={setSortBy} />
 
-            <div className="flex flex-col gap-6">
-              {[...events]
-                .filter((e) => {
-                  if (search) {
-                    const s = search.toLowerCase()
-                    return e.name.toLowerCase().includes(s) || e.venue.toLowerCase().includes(s)
-                  }
-                  if (filter === "all") return true
-                  if (filter === "active") return e.status === "live"
-                  if (filter === "closed") return e.status === "ended"
-                  return e.status === filter
-                })
-                .sort((a, b) => {
-                  if (sortBy === "name") return a.name.localeCompare(b.name)
-                  if (sortBy === "created") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                  return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-                })
-                .map((event) => {
-                  const s = eventStats[event.id] || { checkedIn: 0, totalCapacity: 0 }
-                  return (
-                    <div key={event.id} className="relative group">
-                      <Link href={`/events/${event.id}`}>
-                        <EventCard
-                          name={event.name}
-                          date={new Date(event.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase()}
-                          time={event.time?.slice(0, 5) ?? "N/A"}
-                          guestCount={s.checkedIn}
-                          capacity={event.capacity || 0}
-                          eventType={event.event_type || 'closed'}
-                          status={
-                            event.status === "live" ? "LIVE" : 
-                            event.status === "published" ? "PUBLISHED" : 
-                            event.status === "ended" ? "CLOSED" : "DRAFT"
-                          }
-                        />
-                      </Link>
-                      <button
-                        onClick={(e) => {
+            <div className="flex flex-col gap-4">
+              {filtered.map((event) => {
+                const s = eventStats[event.id] || { checkedIn: 0, totalCapacity: 0 }
+                const cardStatus = event.status === "live" ? "LIVE"
+                  : event.status === "published" ? "PUBLISHED"
+                  : event.status === "ended" ? "CLOSED"
+                  : "DRAFT"
+
+                return (
+                  <div key={event.id} className="relative group">
+                    <Link href={`/events/${event.id}`}>
+                      <EventCard
+                        name={event.name}
+                        date={new Date(event.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase()}
+                        time={event.time?.slice(0, 5) ?? ""}
+                        guestCount={s.checkedIn}
+                        capacity={event.capacity || 0}
+                        eventType={event.event_type || 'closed'}
+                        status={cardStatus}
+                        onStatusClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          setDeleteTarget(event)
+                          setStatusTarget(event)
                         }}
-                        className="absolute top-3 right-3 z-10 size-9 flex items-center justify-center border-2 border-denied text-denied bg-background hover:bg-denied hover:text-paper transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
-                  )
-                })}
+                      />
+                    </Link>
+
+                    {/* Delete button — bottom-right to avoid status tag overlap */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setDeleteTarget(event)
+                      }}
+                      className="absolute bottom-3 right-3 z-10 h-8 w-8 flex items-center justify-center border border-border text-muted-foreground bg-background hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      aria-label={`Delete ${event.name}`}
+                      title="Delete event"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                )
+              })}
             </div>
 
             <DeleteEventDialog
@@ -142,14 +141,21 @@ export function EventsDashboardClient({
         )}
       </div>
 
-      {/* Right: Live Stats Panel */}
+      {/* Stats panel */}
       <div className="lg:col-span-5">
-        <StatsPanel 
-          stats={stats} 
-          remaining={remaining} 
-          capacityPercent={capacityPercent} 
-        />
+        <StatsPanel stats={stats} remaining={remaining} capacityPercent={capacityPercent} />
       </div>
+
+      {/* Status change dialog */}
+      {statusTarget && (
+        <StatusChangeDialog
+          open={!!statusTarget}
+          onOpenChange={(open) => !open && setStatusTarget(null)}
+          eventId={statusTarget.id}
+          eventName={statusTarget.name}
+          currentStatus={statusTarget.status}
+        />
+      )}
     </div>
   )
 }

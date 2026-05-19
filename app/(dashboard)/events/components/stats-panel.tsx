@@ -12,57 +12,49 @@ interface StatsPanelProps {
 
 export function StatsPanel({ stats, remaining, capacityPercent }: StatsPanelProps) {
   const statItems = [
-    { label: "TOTAL_GUESTS", value: stats.totalGuests, icon: <Users className="size-4" /> },
-    { label: "CHECKED_IN", value: stats.checkedIn, icon: <UserCheck className="size-4" /> },
-    { label: "REMAINING", value: remaining, icon: <Clock className="size-4" /> },
-    { label: "CAPACITY_PERCENT", value: `${capacityPercent.toFixed(1)}%`, icon: <BarChart3 className="size-4" /> },
+    { label: "Total guests",   value: stats.totalGuests,               icon: <Users className="size-4" /> },
+    { label: "Checked in",     value: stats.checkedIn,                 icon: <UserCheck className="size-4" /> },
+    { label: "Remaining",      value: remaining,                       icon: <Clock className="size-4" /> },
+    { label: "Capacity used",  value: `${capacityPercent.toFixed(1)}%`, icon: <BarChart3 className="size-4" /> },
   ]
 
   return (
-    <div className="border-2 border-foreground bg-background p-8 sticky top-8">
-      <header className="flex items-center justify-between mb-10 pb-4 border-b-2 border-foreground">
-        <div className="flex items-center gap-3">
-          <div className="size-3 bg-signal animate-blink" />
-          <h3 className="font-display text-3xl uppercase text-foreground">LIVE_FEED</h3>
-        </div>
-        <span className="font-mono text-[10px] text-foreground/60 tracking-widest uppercase">REALTIME_DATA</span>
+    <div className="bg-card border border-border p-7 sticky top-24">
+      <header className="flex items-center gap-3 mb-8 pb-5 border-b border-border">
+        <div className="w-1.5 h-1.5 rounded-full bg-copper animate-blink" />
+        <h3 className="font-display text-xl font-semibold text-foreground tracking-tight">Live overview</h3>
+        <span className="ml-auto font-sans text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Real-time</span>
       </header>
 
-      <div className="flex flex-col">
-        {statItems.map((stat, i) => (
-          <div
-            key={stat.label}
-            className={`flex flex-col ${i !== 0 ? "border-t-4 border-foreground mt-6 pt-6" : ""}`}
-          >
-            <div className="flex items-end justify-between">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 text-foreground/70">
-                  {stat.icon}
-                  <span className="font-mono text-xs uppercase tracking-widest">{stat.label}</span>
-                </div>
-              </div>
-              <span className="font-display text-5xl text-foreground leading-none">{stat.value}</span>
+      <div className="flex flex-col divide-y divide-border">
+        {statItems.map((stat) => (
+          <div key={stat.label} className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-2.5 text-muted-foreground">
+              {stat.icon}
+              <span className="font-sans text-xs uppercase tracking-[0.15em]">{stat.label}</span>
             </div>
+            <span className="font-display text-3xl font-semibold text-foreground leading-none">{stat.value}</span>
           </div>
         ))}
       </div>
 
-      <div className="mt-12">
-        <div className="flex justify-between items-end mb-2">
-          <span className="font-mono text-[10px] text-foreground/40 uppercase">GLOBAL_CAPACITY_LOAD</span>
-          <span className="font-mono text-xs text-signal uppercase">{capacityPercent.toFixed(0)}%</span>
+      <div className="mt-6 pt-5 border-t border-border">
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Global capacity</span>
+          <span className="font-sans text-xs font-semibold text-copper">{capacityPercent.toFixed(0)}%</span>
         </div>
-        <div className="w-full h-6 bg-background border-2 border-foreground relative p-0.5">
+        <div className="w-full h-1.5 bg-muted">
           <div
-            className="h-full bg-signal transition-all duration-1000 ease-out"
+            className="h-full bg-copper transition-all duration-1000 ease-out"
             style={{ width: `${capacityPercent}%` }}
           />
         </div>
       </div>
 
-      <div className="mt-10 p-4 bg-secondary border border-foreground/20 font-mono text-[10px] text-foreground/60 uppercase leading-relaxed">
-        * ALL DATA AGGREGATED FROM ACTIVE SYSTEM TOKENS. <br />
-        SCANNER CONNECTIONS ARE CURRENTLY ENCRYPTED.
+      <div className="mt-5 p-4 bg-muted/50 border border-border">
+        <p className="font-sans text-[10px] text-muted-foreground leading-relaxed">
+          All data aggregated across active events. Scanner connections are encrypted.
+        </p>
       </div>
     </div>
   )

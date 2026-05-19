@@ -9,21 +9,21 @@ interface ControlBarProps {
 
 export function ControlBar({ filter, setFilter, sortBy, setSortBy }: ControlBarProps) {
   const filters = [
-    { id: "all", label: "ALL" },
-    { id: "active", label: "ACTIVE" },
-    { id: "closed", label: "CLOSED" },
-    { id: "draft", label: "DRAFT" },
-    { id: "published", label: "PUBLISHED" },
+    { id: "all",       label: "All" },
+    { id: "active",    label: "Live" },
+    { id: "published", label: "Published" },
+    { id: "draft",     label: "Draft" },
+    { id: "closed",    label: "Ended" },
   ]
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 mb-10 pb-8 border-b-2 border-foreground/10">
-      {/* Status Filter */}
-      <div className="flex flex-col gap-1.5 flex-1">
-        <span className="font-mono text-[9px] uppercase text-foreground/40 tracking-[0.2em]">
-          FILTER_BY_STATUS
+    <div className="flex flex-col sm:flex-row gap-5 mb-8 pb-6 border-b border-border">
+      {/* Status filter pills */}
+      <div className="flex flex-col gap-2 flex-1">
+        <span className="font-sans text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
+          Filter
         </span>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {filters.map((f) => {
             const isActive = filter === f.id
             return (
@@ -31,10 +31,10 @@ export function ControlBar({ filter, setFilter, sortBy, setSortBy }: ControlBarP
                 key={f.id}
                 onClick={() => setFilter(f.id)}
                 className={cn(
-                  "px-3 py-1 font-mono text-[10px] uppercase tracking-widest border transition-colors",
+                  "px-3 py-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.14em] border transition-all",
                   isActive
                     ? "bg-foreground text-background border-foreground"
-                    : "bg-transparent text-foreground/60 border-foreground/20 hover:border-foreground/50 hover:text-foreground"
+                    : "bg-transparent text-muted-foreground border-border hover:border-foreground/40 hover:text-foreground"
                 )}
               >
                 {f.label}
@@ -44,26 +44,26 @@ export function ControlBar({ filter, setFilter, sortBy, setSortBy }: ControlBarP
         </div>
       </div>
 
-      {/* Sort Selection */}
-      <div className="flex flex-col gap-1.5 min-w-[180px]">
-        <span className="font-mono text-[9px] uppercase text-foreground/40 tracking-[0.2em]">
-          SORT_BY
+      {/* Sort select */}
+      <div className="flex flex-col gap-2 min-w-[160px]">
+        <span className="font-sans text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
+          Sort by
         </span>
         <select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as any)}
-          className="bg-transparent border border-foreground/20 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-foreground focus:outline-none focus:border-signal appearance-none cursor-pointer h-9"
+          onChange={(e) => setSortBy(e.target.value as "updated" | "created" | "name")}
+          className="bg-muted border border-border px-3 py-1.5 font-sans text-[11px] uppercase tracking-[0.12em] text-foreground focus:outline-none focus:border-copper appearance-none cursor-pointer h-9"
           style={{
             backgroundImage:
               "linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%)",
-            backgroundPosition: "calc(100% - 15px) center, calc(100% - 10px) center",
-            backgroundSize: "5px 5px, 5px 5px",
+            backgroundPosition: "calc(100% - 14px) center, calc(100% - 9px) center",
+            backgroundSize: "4px 4px, 4px 4px",
             backgroundRepeat: "no-repeat",
           }}
         >
-          <option value="updated" className="bg-background">LAST_INTERACTED</option>
-          <option value="created" className="bg-background">DATE_CREATED</option>
-          <option value="name" className="bg-background">NAME_A_Z</option>
+          <option value="updated">Last updated</option>
+          <option value="created">Date created</option>
+          <option value="name">Name A–Z</option>
         </select>
       </div>
     </div>

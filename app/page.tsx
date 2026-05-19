@@ -1,263 +1,371 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Button } from '@/components/ui/button'
+import { QrCode, ArrowRight } from 'lucide-react'
+import { ModeToggle } from '@/components/mode-toggle'
 import { cn } from '@/lib/utils'
-import { QrCode, Zap, BarChart3, ShieldCheck, ArrowRight } from 'lucide-react'
 
 export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const useCases = [
-    "WEDDINGS", "CONFERENCES", "CHURCH PROGRAMS", "BIRTHDAY PARTIES", 
-    "GALAS", "PRIVATE DINNERS", "CONCERTS", "FESTIVALS", "WORKSHOPS"
+    "Weddings", "Galas", "Conferences", "Church Programs",
+    "Birthday Parties", "Concerts", "Private Dinners", "Festivals", "Workshops"
   ]
 
   return (
-    <div className="bg-background min-h-screen text-foreground overflow-x-hidden font-mono selection:bg-signal selection:text-void">
-      {/* Background Texture: Repeating Diagonal "GATEKEEP" */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.04]">
-        <div className="absolute inset-0 flex flex-wrap gap-x-12 gap-y-8 p-10 rotate-[-15deg] scale-150">
-          {Array(200).fill(0).map((_, i) => (
-            <span key={i} className="font-display text-4xl whitespace-nowrap">GATEKEEP</span>
-          ))}
-        </div>
-      </div>
+    <div className="bg-background text-foreground min-h-screen overflow-x-hidden selection:bg-copper/30">
 
-      {/* Top Nav */}
-      <nav className="relative z-10 border-b-2 border-foreground/20 flex items-center justify-between px-6 py-6 md:px-12 bg-background/80 backdrop-blur-sm">
-        <div className="font-display text-4xl tracking-[0.3em] uppercase">GATEKEEP</div>
-        <div className="flex gap-4 items-center">
-          {user ? (
-            <Link href="/events">
-              <Button variant="signal" size="lg">DASHBOARD</Button>
+      {/* ── NAV ── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 md:px-14 py-5 border-b border-border bg-background/90 backdrop-blur-sm">
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-7 h-7 border border-copper/60 flex items-center justify-center group-hover:border-copper transition-colors">
+            <QrCode className="w-3.5 h-3.5 text-copper" />
+          </div>
+          <span
+            className="font-display text-xl font-light tracking-[0.25em] uppercase text-foreground"
+            style={{ letterSpacing: '0.2em' }}
+          >
+            Crenelle
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-7">
+            {[['#process', 'Process'], ['#features', 'Features'], ['#uses', 'For']].map(([href, label]) => (
+              <a key={href} href={href}
+                className="font-sans text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground transition-colors"
+              >{label}</a>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <ModeToggle />
+            <div className="w-px h-4 bg-border hidden md:block" />
+            <Link href="/login"
+              className="font-sans text-xs font-semibold uppercase tracking-[0.15em] text-foreground border border-border hover:border-copper hover:text-copper px-5 py-2.5 transition-all"
+            >
+              {user ? 'Dashboard' : 'Sign in'}
             </Link>
-          ) : (
-            <>
-              <Link href="/login">
-                <Button variant="ghost" className="hidden md:flex">LOG IN</Button>
-              </Link>
-              <Link href="/login">
-                <Button variant="signal" size="lg">GET STARTED</Button>
-              </Link>
-            </>
-          )}
+          </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative z-10 min-h-[90vh] flex flex-col justify-center px-6 md:px-12 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-          <div className="flex flex-col items-start">
-            <h1 className="font-display uppercase leading-[0.85] tracking-tighter flex flex-col">
-              <span className="text-[clamp(80px,15vw,160px)] text-foreground">NO</span>
-              <span className="text-[clamp(80px,15vw,160px)] text-signal">UNINVITED</span>
-              <span className="text-[clamp(80px,15vw,160px)] text-foreground">GUESTS.</span>
-            </h1>
-            
-            <p className="mt-8 text-foreground/90 text-lg md:text-xl max-w-120 leading-tight">
-              QR-coded entry cards. Real-time scanning. <br/>
-              Full control over your door.
+      {/* ── HERO ── */}
+      <section className="min-h-screen pt-24 pb-20 px-8 md:px-14 flex flex-col justify-center relative overflow-hidden">
+
+        {/* Watermark text — structural atmosphere */}
+        <div
+          className="absolute top-1/2 left-0 right-0 -translate-y-1/2 font-display font-bold text-center pointer-events-none select-none text-foreground/[0.04]"
+          style={{
+            fontSize: 'clamp(80px, 18vw, 260px)',
+            letterSpacing: '-0.04em',
+            lineHeight: 1,
+          }}
+          aria-hidden="true"
+        >
+          CRENELLE
+        </div>
+
+        {/* Vertical copper rule — left edge */}
+        <div className="absolute left-8 md:left-14 top-32 bottom-20 w-px bg-copper/15 hidden lg:block" />
+
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-16 xl:gap-24 items-center max-w-7xl mx-auto w-full">
+
+          {/* Left — Typography as architecture */}
+          <div className="pl-0 lg:pl-8">
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.3em] text-copper mb-8 mt-10">
+              Event Access Management
             </p>
 
-            <Link href="/login" className="mt-12">
-              <Button variant="signal" size="lg" className="h-16 px-10 text-2xl">
-                CREATE YOUR EVENT →
-              </Button>
-            </Link>
+            <h1
+              className="font-display font-bold leading-[0.9] tracking-tight mb-10"
+              style={{ fontSize: 'clamp(64px, 10vw, 130px)' }}
+            >
+              <span className="block text-foreground italic">No</span>
+              <span className="block text-foreground">Uninvited</span>
+              <span className="block text-copper">Guests.</span>
+            </h1>
+
+            <div className="border-l border-copper/40 pl-6 mb-10 max-w-md">
+              <p className="font-sans text-sm font-normal leading-relaxed text-muted-foreground">
+                QR-coded entry passes. Real-time gate scanning. Live attendance dashboards.
+                Total control from invitation to exit.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Link href="/login"
+                className="inline-flex items-center gap-3 bg-foreground text-background font-sans text-sm font-semibold uppercase tracking-[0.12em] px-8 py-4 hover:bg-foreground/90 transition-colors group"
+              >
+                Create an event
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <a href="#process"
+                className="font-sans text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                See how →
+              </a>
+            </div>
+
+            {/* Stats row */}
+            <div className="flex items-center gap-10 mt-16 pt-8 border-t border-border">
+              {[
+                { n: '847', label: 'Events hosted' },
+                { n: '134k+', label: 'Guests processed' },
+                { n: '99.8%', label: 'Scan accuracy' },
+              ].map(s => (
+                <div key={s.label}>
+                  <p className="font-display text-2xl font-semibold text-foreground">{s.n}</p>
+                  <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-muted-foreground mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Desktop Only: Mock Entry Card */}
+          {/* Right — Physical pass mockup */}
           <div className="hidden lg:flex justify-center items-center">
-            <div className="relative w-105 bg-background border-2 border-signal p-8 flex flex-col gap-6 shadow-[20px_20px_0px_0px_rgba(255,214,0,0.15)]">
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col">
-                  <span className="text-[10px] uppercase text-signal/80 mb-1">EVENT_ACCESS_PASS</span>
-                  <div className="font-display text-4xl uppercase text-foreground leading-none">UNDERGROUND_RAVE</div>
-                </div>
-                <div className="bg-signal text-void font-display text-xl px-2">LIVE</div>
-              </div>
+            <div className="animate-float" style={{ filter: 'drop-shadow(0 24px 48px rgba(0,0,0,0.6))' }}>
+              {/* Pass ticket — printed on card stock */}
+              <div className="relative w-96 bg-card text-card-foreground border border-border overflow-hidden"
+                style={{ boxShadow: '4px 4px 0 0 rgba(var(--copper-rgb), 0.2)' }}
+              >
+                {/* Copper top bar */}
+                <div className="h-1.5 bg-copper w-full" />
 
-              <div className="border-t border-dashed border-signal/60 my-2" />
-
-              <div className="flex justify-between items-end">
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase text-signal/70">GUEST_IDENTITY</span>
-                    <span className="font-mono text-sm text-foreground">ALEX_HARRIS // G048</span>
+                {/* Top section */}
+                <div className="px-7 pt-6 pb-5">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <p className="font-sans text-[9px] font-semibold uppercase tracking-[0.25em] text-muted-foreground mb-1">Entry Pass</p>
+                      <p className="font-display text-2xl font-bold leading-tight">The Grand Meridian<br/>Gala 2026</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="inline-block font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-copper border border-copper px-2 py-1">
+                        Live
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase text-signal/70">VENUE_STATION</span>
-                    <span className="font-mono text-sm text-foreground">WAREHOUSE_B_LOND</span>
+
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-4">
+                    {[
+                      ['Guest', 'Alexandra Harris'],
+                      ['Ref.', 'CRN-7H2K-9P'],
+                      ['Date', '21 Jun 2026'],
+                      ['Venue', 'The Meridian, Lagos'],
+                    ].map(([label, val]) => (
+                      <div key={label}>
+                        <p className="font-sans text-[8px] uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
+                        <p className="font-sans text-xs font-semibold mt-0.5">{val}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Fake QR Code Grid */}
-                <div className="grid grid-cols-8 w-24 h-24 bg-foreground/90 p-1 border-2 border-background shrink-0">
-                  {Array(64).fill(0).map((_, i) => (
-                    <div key={i} className={cn("w-full h-full", Math.random() > 0.4 ? "bg-background" : "bg-transparent")} />
-                  ))}
+                {/* Perforated tear line */}
+                <div className="relative mx-5 border-t border-dashed border-border flex items-center">
+                  <div className="absolute -left-8 w-4 h-4 rounded-full bg-background" />
+                  <div className="absolute -right-8 w-4 h-4 rounded-full bg-background" />
                 </div>
-              </div>
 
-              {/* Red Stamp */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-[-15deg] border-4 border-denied text-denied font-display text-6xl px-6 py-2 uppercase opacity-80 pointer-events-none select-none">
-                ADMIT ONE
+                {/* Bottom stub */}
+                <div className="px-7 py-5 flex items-center justify-between">
+                  <div>
+                    <p className="font-sans text-[8px] uppercase tracking-[0.2em] text-muted-foreground mb-1">Table / Seat</p>
+                    <p className="font-display text-xl font-semibold">Table 7 · A</p>
+                    <p className="font-sans text-[9px] text-muted-foreground mt-0.5">Party of 2</p>
+                  </div>
+
+                  {/* QR Grid */}
+                  <div className="border border-border p-1.5 bg-white">
+                    <div className="grid grid-cols-9 w-20 h-20">
+                      {Array(81).fill(0).map((_, i) => (
+                        <div key={i}
+                          className={cn("w-full h-full", [0,1,2,3,4,5,6,7,9,15,18,21,24,27,28,29,30,31,32,33,34,35,36,38,40,42,44,46,48,50,53,56,59,62,63,64,65,66,67,68,70,72,74,76].includes(i)
+                            ? 'bg-black' : 'bg-white'
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ADMIT ONE stamp — rotated overlay */}
+                <div
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-display font-bold text-4xl text-copper border-2 border-copper px-5 py-2 uppercase select-none pointer-events-none"
+                  style={{ transform: 'translate(-50%, -50%) rotate(-14deg)', opacity: 0.18, letterSpacing: '0.1em' }}
+                >
+                  ADMIT ONE
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Section 2: How It Works */}
-      <section className="bg-foreground text-background py-24 md:py-32 px-6 md:px-12 border-y-4 border-foreground">
+      {/* ── USE CASES STRIP ── */}
+      <section id="uses" className="border-y border-border py-5 overflow-hidden bg-card/40">
+        <div className="animate-marquee">
+          {Array(2).fill(0).map((_, i) => (
+            <div key={i} className="flex items-center shrink-0">
+              {useCases.map(uc => (
+                <span key={uc}
+                  className="font-display italic text-2xl text-muted-foreground mx-10 whitespace-nowrap flex items-center gap-6"
+                >
+                  {uc}
+                  <span className="w-1 h-1 rounded-full bg-copper/50 inline-block not-italic" />
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── PROCESS ── */}
+      <section id="process" className="py-28 px-8 md:px-14 border-b border-border">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-20">
-            <h2 className="font-display text-6xl md:text-8xl uppercase leading-none inline-block relative">
-              HOW IT WORKS
-              <div className="absolute -bottom-2 left-0 w-full h-1 md:h-2 bg-signal" />
+
+          <div className="flex items-baseline gap-6 mb-16">
+            <h2 className="font-display italic font-light text-5xl md:text-6xl text-foreground">The process</h2>
+            <div className="flex-1 h-px bg-border ml-4" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-border">
+            {[
+              { n: '01', title: 'Create your event', body: 'Set the event name, date, venue, and capacity. Done in minutes. No technical setup required.' },
+              { n: '02', title: 'Add your guest list', body: 'Enter each guest with their party size and seat. Crenelle generates their unique QR entry pass automatically.' },
+              { n: '03', title: 'Print & distribute passes', body: 'Download beautifully formatted entry cards. Print and hand-deliver, or dispatch via email.' },
+              { n: '04', title: 'Scan at the gate', body: 'Share the scanner link with your ushers. They use their own phones — no app download, no login.' },
+            ].map(step => (
+              <div key={step.n} className="bg-card px-8 py-10 group hover:bg-muted/30 transition-colors">
+                <p
+                  className="font-display font-bold text-foreground/[0.05] leading-none mb-6 select-none"
+                  style={{ fontSize: 'clamp(56px, 8vw, 96px)' }}
+                >
+                  {step.n}
+                </p>
+                <div className="accent-bar">
+                  <h3 className="font-display text-2xl font-semibold text-foreground mb-3">{step.title}</h3>
+                  <p className="font-sans text-sm text-muted-foreground leading-relaxed">{step.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURES ── */}
+      <section id="features" className="py-28 px-8 md:px-14 bg-card/50 border-b border-border">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-16">
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.3em] text-copper mb-4">What you get</p>
+            <h2
+              className="font-display font-semibold text-foreground leading-[0.95]"
+              style={{ fontSize: 'clamp(40px, 6vw, 80px)' }}
+            >
+              Everything you need<br />
+              <span className="italic font-light">at the gate.</span>
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
-            {[
-              { num: "01", title: "Create your event", desc: "Set the event name, date, venue, and total capacity in minutes." },
-              { num: "02", title: "Add your guest list", desc: "Enter each guest with their party size and seat assignment. GateKeep generates their unique QR card automatically." },
-              { num: "03", title: "Print & distribute cards", desc: "Download beautifully designed entry cards and print them. Hand-deliver or post them to your guests." },
-              { num: "04", title: "Scan at the gate", desc: "Share a scanner link with your ushers. They scan every card at the entrance — green means in, red means out." }
-            ].map((step, i) => (
-              <div key={step.num} className="flex flex-col gap-4">
-                <span className="font-display text-5xl text-signal">{step.num}</span>
-                <h3 className="font-display text-3xl uppercase leading-tight">{step.title}</h3>
-                <p className="font-mono text-sm leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Section 3: Features */}
-      <section className="py-24 md:py-32 px-6 md:px-12 bg-background relative overflow-hidden border-b-2 border-foreground/20">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
-            <h3 className="text-signal font-display text-2xl tracking-[0.2em] uppercase mb-4">FEATURES</h3>
-            <h2 className="font-display text-5xl md:text-8xl uppercase leading-none mb-8">Everything you need at the gate</h2>
-            <p className="font-mono text-foreground/70 max-w-2xl mx-auto text-lg md:text-xl leading-tight">
-              Built specifically for the challenges of Nigerian events — and any event where access control matters.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Feature rows — editorial, not cards */}
+          <div className="flex flex-col divide-y divide-parchment/[0.07]">
             {[
               {
-                icon: <QrCode className="w-10 h-10" />,
-                title: "Personalised QR Entry Cards",
-                desc: "Every guest gets a unique QR code tied to their name, party size, and seat. Printed and handed out before the event."
+                num: '01',
+                title: 'Personalised QR Entry Passes',
+                body: 'Every guest receives a unique QR code tied to their name, party size, and seat — generated the moment you add them. Formatted for print, ready to hand out.',
+                tag: 'Core',
               },
               {
-                icon: <Zap className="w-10 h-10" />,
-                title: "Instant Gate Scanning",
-                desc: "Ushers scan cards using their phone browser — no app download, no login. Entry confirmed in under two seconds."
+                num: '02',
+                title: 'Instant Gate Scanning',
+                body: 'Ushers scan from any phone browser. No app to download, no credentials needed. Green means in. Entry confirmed in under two seconds.',
+                tag: 'Real-time',
               },
               {
-                icon: <BarChart3 className="w-10 h-10" />,
-                title: "Live Attendance Dashboard",
-                desc: "Watch arrivals in real time from any device. See who's in, who's pending, and your live headcount — all updating instantly."
+                num: '03',
+                title: 'Live Attendance Dashboard',
+                body: 'Watch arrivals update in real time from any device. See who\'s in, who\'s pending, and your live headcount — all without refreshing.',
+                tag: 'Analytics',
               },
               {
-                icon: <ShieldCheck className="w-10 h-10" />,
-                title: "Zero Uninvited Guests",
-                desc: "Every QR code works exactly once. Duplicates are flagged immediately. No valid card means no entry — no exceptions."
-              }
-            ].map((feature, i) => (
-              <div key={i} className="group p-8 border-2 border-foreground/10 bg-secondary/30 hover:border-signal transition-colors flex flex-col gap-6 relative">
-                <div className="text-signal group-hover:scale-110 transition-transform duration-300">
-                  {feature.icon}
+                num: '04',
+                title: 'Zero Uninvited Guests',
+                body: 'Every QR code works exactly once. Duplicates are flagged immediately on scan. No valid pass means no entry — no exceptions, no arguments.',
+                tag: 'Security',
+              },
+            ].map(f => (
+              <div key={f.num} className="grid grid-cols-1 md:grid-cols-[80px_1fr_auto] gap-6 py-10 items-start group">
+                <p className="font-display text-4xl font-light text-muted-foreground group-hover:text-copper transition-colors">{f.num}</p>
+                <div>
+                  <h3 className="font-display text-2xl md:text-3xl font-semibold text-foreground mb-3">{f.title}</h3>
+                  <p className="font-sans text-sm text-muted-foreground leading-relaxed max-w-2xl">{f.body}</p>
                 </div>
-                <h3 className="font-display text-3xl uppercase leading-tight">{feature.title}</h3>
-                <p className="font-mono text-sm text-foreground/80 leading-relaxed">{feature.desc}</p>
-                <div className="absolute top-4 right-4 text-[10px] font-mono text-foreground/20 group-hover:text-signal/40">
-                  REF_{i+1}
-                </div>
+                <span className="font-sans text-[9px] font-bold uppercase tracking-[0.25em] text-copper border border-copper/30 px-3 py-1.5 self-start">
+                  {f.tag}
+                </span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Section 4: Use Cases Ticker */}
-      <section className="py-24 bg-background border-b-2 border-foreground/20">
-        <h2 className="px-6 md:px-12 font-display text-4xl uppercase text-foreground mb-10 tracking-widest text-center md:text-left">BUILT FOR</h2>
-        
-        <div className="border-y-2 border-foreground/40 py-8 bg-secondary/10 overflow-hidden flex">
-          <div className="animate-marquee flex items-center">
-            {Array(2).fill(0).map((_, i) => (
-              <div key={i} className="flex items-center">
-                {useCases.map((useCase) => (
-                  <span key={useCase} className="font-display text-6xl md:text-8xl text-signal mx-8 whitespace-nowrap">
-                    {useCase} ·
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
+      {/* ── CTA ── */}
+      <section className="py-32 px-8 md:px-14 relative overflow-hidden">
+        {/* Background number — structural */}
+        <div
+          className="absolute inset-0 flex items-center justify-center font-display font-bold text-parchment/[0.02] pointer-events-none select-none"
+          style={{ fontSize: '35vw', lineHeight: 1 }}
+          aria-hidden="true"
+        >
+          IN
         </div>
-      </section>
 
-      {/* Section 5: CTA */}
-      <section className="py-32 px-6 md:px-12 bg-void border-b-4 border-signal text-center relative overflow-hidden">
-        {/* Background Noise/Pattern */}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-        
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <h2 className="font-display text-6xl md:text-9xl uppercase leading-none mb-8 tracking-tighter">
-            Ready to take <br/> control of your event?
+        <div className="relative z-10 max-w-5xl">
+          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.3em] text-copper mb-8">Ready?</p>
+          <h2
+            className="font-display font-semibold text-foreground leading-[0.92] tracking-tight mb-12"
+            style={{ fontSize: 'clamp(48px, 8vw, 110px)' }}
+          >
+            Take control of<br />
+            <span className="italic font-light">your door.</span>
           </h2>
-          <p className="font-mono text-xl md:text-2xl text-signal/90 mb-12 uppercase tracking-wide">
-            Set up in minutes. No technical knowledge required.
-          </p>
-          <Link href="/login">
-            <Button variant="signal" size="lg" className="h-20 px-12 text-3xl group">
-              CREATE FREE ACCOUNT 
-              <ArrowRight className="ml-4 w-8 h-8 group-hover:translate-x-2 transition-transform" />
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-5 items-start">
+            <Link href="/login"
+              className="inline-flex items-center gap-3 bg-foreground text-background font-sans text-sm font-semibold uppercase tracking-[0.12em] px-10 py-5 hover:opacity-80 transition-opacity group"
+            >
+              Create a free account
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <p className="font-sans text-xs text-muted-foreground self-center">No credit card. Set up in five minutes.</p>
+          </div>
         </div>
-
-        {/* Decorative elements */}
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 border-4 border-signal/20 rotate-45" />
-        <div className="absolute -top-10 -right-10 w-40 h-40 border-4 border-signal/20 -rotate-12" />
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-6 md:px-12 bg-background border-t-2 border-foreground/10">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-8 max-w-7xl mx-auto">
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <div className="font-display text-4xl tracking-[0.3em] uppercase text-foreground">GATEKEEP</div>
-            <p className="font-mono text-[10px] text-foreground/50 uppercase tracking-[0.2em]">
-              © 2026 GATEKEEP. BUILT FOR EVENTS THAT MATTER.
-            </p>
+      {/* ── FOOTER ── */}
+      <footer className="border-t border-border py-10 px-8 md:px-14">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border border-copper/50 flex items-center justify-center">
+              <QrCode className="w-3 h-3 text-copper" />
+            </div>
+            <span className="font-display font-light tracking-[0.2em] uppercase text-muted-foreground text-sm">Crenelle</span>
+            <span className="text-muted-foreground/40 text-xs ml-4">© 2026. All rights reserved.</span>
           </div>
-          
-          <div className="flex gap-12">
-            <div className="flex flex-col gap-2">
-              <span className="font-display text-xs text-signal tracking-widest uppercase">Navigation</span>
-              <div className="flex flex-col gap-1 font-mono text-sm uppercase">
-                <Link href="/login" className="hover:text-signal transition-colors">Login</Link>
-                <Link href="/login" className="hover:text-signal transition-colors">Register</Link>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <span className="font-display text-xs text-signal tracking-widest uppercase">Social</span>
-              <div className="flex flex-col gap-1 font-mono text-sm uppercase">
-                <a href="#" className="hover:text-signal transition-colors">Twitter</a>
-                <a href="#" className="hover:text-signal transition-colors">Instagram</a>
-              </div>
-            </div>
+
+          <div className="flex gap-10">
+            {[
+              ['#process', 'Process'],
+              ['#features', 'Features'],
+              ['/login', 'Sign in'],
+            ].map(([href, label]) => (
+              <a key={href} href={href}
+                className="font-sans text-xs uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground transition-colors"
+              >{label}</a>
+            ))}
           </div>
         </div>
       </footer>
     </div>
   )
 }
-

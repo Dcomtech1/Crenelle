@@ -6,7 +6,6 @@ import { Plus, Copy, ToggleLeft, ToggleRight, Trash2, Link2 } from 'lucide-react
 import { createScannerLink, toggleScannerLink, deleteScannerLink } from '@/app/actions/scanner-links'
 import { createClient } from '@/lib/supabase/client'
 import { fieldCls, labelCls } from '@/lib/form-styles'
-import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { SectionHeader } from '@/components/section-header'
@@ -85,14 +84,14 @@ export default function ScannerLinksPage() {
 
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogTrigger asChild>
-            <Button variant="signal" className="gap-2 h-12 px-6 text-sm shrink-0">
+            <button className="inline-flex items-center gap-2 bg-foreground text-background font-sans text-sm font-semibold uppercase tracking-[0.12em] px-6 py-3 hover:opacity-80 transition-opacity shrink-0">
               <Plus className="h-4 w-4" aria-hidden="true" />
-              NEW_LINK
-            </Button>
+              New link
+            </button>
           </DialogTrigger>
-          <DialogContent className="bg-background border-2 border-foreground/20 max-w-md">
+          <DialogContent className="bg-background border border-border max-w-md">
             <DialogHeader>
-              <DialogTitle className="font-display text-3xl uppercase text-foreground">Create Scanner Link</DialogTitle>
+              <DialogTitle className="font-display text-2xl font-semibold text-foreground">Create scanner link</DialogTitle>
             </DialogHeader>
             <form action={handleCreate} className="flex flex-col gap-5 mt-2">
               <div className="flex flex-col gap-2">
@@ -104,13 +103,15 @@ export default function ScannerLinksPage() {
                   defaultValue="Main Entrance"
                   className={fieldCls}
                 />
-                <p className="font-mono text-[10px] text-foreground/30 uppercase tracking-wide">
+                <p className="font-sans text-[10px] text-muted-foreground/60 uppercase tracking-wide">
                   Helps identify which usher is at which gate
                 </p>
               </div>
-              <Button type="submit" variant="signal" className="w-full h-12 text-sm" disabled={isPending}>
-                {isPending ? 'CREATING...' : 'CREATE LINK →'}
-              </Button>
+              <button type="submit" disabled={isPending}
+                className="w-full bg-foreground text-background font-sans text-sm font-semibold uppercase tracking-[0.12em] py-3.5 hover:opacity-80 transition-opacity disabled:opacity-40"
+              >
+                {isPending ? 'Creating...' : 'Create link →'}
+              </button>
             </form>
           </DialogContent>
         </Dialog>
@@ -128,11 +129,11 @@ export default function ScannerLinksPage() {
           {links.map((link) => (
             <div
               key={link.id}
-              className="border-2 border-foreground/10 bg-background p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-foreground/20 transition-colors"
+              className="bg-card border border-border p-5 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-copper/30 transition-colors"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="font-display text-xl uppercase text-foreground">{link.label}</span>
+                  <span className="font-display text-xl font-semibold text-foreground">{link.label}</span>
                   <span
                     className={`font-mono text-[9px] uppercase tracking-widest px-2 py-1 ${link.is_active ? 'status-admitted' : 'bg-foreground/10 text-foreground/40'}`}
                     aria-label={`Status: ${link.is_active ? 'Active' : 'Inactive'}`}
@@ -140,43 +141,40 @@ export default function ScannerLinksPage() {
                     {link.is_active ? 'ACTIVE' : 'INACTIVE'}
                   </span>
                 </div>
-                <p className="font-mono text-[10px] text-foreground/30 uppercase tracking-wide truncate">
+                <p className="font-sans text-[10px] text-muted-foreground truncate">
                   {scanUrl(link.token)}
                 </p>
               </div>
 
               <div className="flex gap-2 shrink-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 font-mono text-[10px] uppercase tracking-widest text-foreground/40 hover:text-foreground border border-foreground/10 hover:border-foreground/30 h-9 px-3"
+                {/* Copy */}
+                <button
                   onClick={() => copyLink(link.token)}
                   aria-label={`Copy link for ${link.label}`}
+                  className="inline-flex items-center gap-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground border border-border hover:border-foreground/30 hover:text-foreground px-3 h-9 transition-all"
                 >
-                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                  COPY
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy
+                </button>
+                {/* Toggle */}
+                <button
                   onClick={() => handleToggle(link)}
-                  className="gap-1 font-mono text-[10px] uppercase tracking-widest text-foreground/40 hover:text-foreground border border-foreground/10 hover:border-foreground/30 h-9 px-3"
-                  aria-label={`${link.is_active ? 'Deactivate' : 'Activate'} link ${link.label}`}
+                  aria-label={`${link.is_active ? 'Deactivate' : 'Activate'} ${link.label}`}
+                  className="inline-flex items-center gap-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground border border-border hover:border-foreground/30 hover:text-foreground px-3 h-9 transition-all"
                 >
                   {link.is_active
-                    ? <><ToggleRight className="h-4 w-4 text-admitted" aria-hidden="true" />DEACTIVATE</>
-                    : <><ToggleLeft className="h-4 w-4" aria-hidden="true" />ACTIVATE</>
+                    ? <><ToggleRight className="h-4 w-4 text-admitted" />Deactivate</>
+                    : <><ToggleLeft className="h-4 w-4" />Activate</>
                   }
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                </button>
+                {/* Delete */}
+                <button
                   onClick={() => setDeleteTarget(link)}
-                  className="font-mono text-[10px] uppercase tracking-widest text-denied/40 hover:text-denied border border-denied/10 hover:border-denied/30 h-9 px-3"
                   aria-label={`Delete scanner link ${link.label}`}
+                  className="inline-flex items-center justify-center font-sans text-[10px] font-semibold uppercase text-destructive/60 border border-destructive/20 hover:border-destructive/50 hover:text-destructive hover:bg-destructive/[0.06] px-3 h-9 transition-all"
                 >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                </Button>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
           ))}
@@ -184,9 +182,9 @@ export default function ScannerLinksPage() {
       )}
 
       {/* Info panel */}
-      <div className="mt-8 border-l-4 border-signal p-5 bg-signal/5">
-        <p className="font-mono text-xs text-foreground/60 uppercase tracking-wide leading-relaxed">
-          <span className="text-signal font-bold">HOW TO USE:</span>{' '}
+      <div className="mt-8 border-l-2 border-copper bg-copper/[0.06] p-5">
+        <p className="font-sans text-xs text-foreground/70 leading-relaxed">
+          <span className="font-semibold text-copper">How to use:</span>{' '}
           Copy a link and send it to your usher via WhatsApp or SMS.
           They open it on their phone browser — no app download, no login required.
           The link only works for this event.

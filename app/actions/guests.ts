@@ -40,7 +40,7 @@ export async function addGuest(eventId: string, formData: FormData) {
   if (email) {
     const { data: event } = await supabase
       .from('events')
-      .select('name, date, time, venue, description')
+      .select('name, date, time, venue, description, banner_url')
       .eq('id', eventId)
       .single()
 

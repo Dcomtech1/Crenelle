@@ -17,6 +17,7 @@ export interface EventDetails {
   time: string | null
   venue: string
   description?: string | null
+  banner_url?: string | null
 }
 
 export interface InvitationEmailOptions {
@@ -130,6 +131,13 @@ export async function sendInvitationEmail({
           </td>
         </tr>
       </table>
+
+      ${event.banner_url ? `
+      <!-- Banner Image -->
+      <div style="margin-bottom:24px;border:1px solid rgba(12,11,9,0.08);border-radius:2px;overflow:hidden;background-color:#F4F1EC;">
+        <img src="${event.banner_url}" alt="${event.name} Banner" style="width:100%;height:auto;display:block;border:none;" />
+      </div>
+      ` : ''}
 
       <!-- Title / Header -->
       <div style="margin-bottom:30px;">
@@ -325,6 +333,13 @@ export async function sendReminderEmailsDirect({
           </td>
         </tr>
       </table>
+
+      ${event.banner_url ? `
+      <!-- Banner Image -->
+      <div style="margin-bottom:24px;border:1px solid rgba(12,11,9,0.08);border-radius:2px;overflow:hidden;background-color:#F4F1EC;">
+        <img src="${event.banner_url}" alt="${event.name} Banner" style="width:100%;height:auto;display:block;border:none;" />
+      </div>
+      ` : ''}
 
       <!-- Title / Header -->
       <div style="margin-bottom:30px;">

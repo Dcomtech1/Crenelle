@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { CalendarDays, MapPin, Clock, CheckCircle2, XCircle, Users } from 'lucide-react'
 import { submitRegistration } from '@/app/actions/registrations'
+import { getOptimizedBannerUrl } from '@/lib/images'
 
 interface EventInfo {
   id: string
@@ -129,7 +130,7 @@ export default function PublicRegistrationPage() {
           <div className="border-2 border-foreground/20 border-b-0 aspect-video w-full overflow-hidden bg-void/10 select-none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={event.banner_url}
+              src={getOptimizedBannerUrl(event.banner_url, 'web')}
               alt={`${event.name} banner`}
               className="w-full h-full object-cover"
             />

@@ -13,6 +13,13 @@ export function getOptimizedBannerUrl(
   // Standard Supabase URL: https://[project-ref].supabase.co/storage/v1/object/public/banners/[filename]
   // Transform URL: https://[project-ref].supabase.co/storage/v1/render/image/public/banners/[filename]
   if (url.includes('/storage/v1/object/public/banners/')) {
+    const isTransformationEnabled = process.env.NEXT_PUBLIC_SUPABASE_IMAGE_TRANSFORMATION === 'true'
+    
+    if (!isTransformationEnabled) {
+      // Gracefully fall back to standard un-resized public storage URL (for Supabase Free plan)
+      return url
+    }
+
     const transformUrl = url.replace('/storage/v1/object/public/banners/', '/storage/v1/render/image/public/banners/')
     
     if (type === 'email') {

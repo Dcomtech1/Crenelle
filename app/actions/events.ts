@@ -47,11 +47,32 @@ export async function createEvent(formData: FormData) {
   redirect(`/events/${data.id}`)
 }
 
+function getStorageFilename(url: string | null | undefined): string | null {
+  if (!url) return null
+  if (!url.includes('/storage/v1/object/public/banners/')) return null
+  try {
+    const parts = url.split('/storage/v1/object/public/banners/')
+    if (parts.length < 2) return null
+    const filename = parts[1].split('?')[0].split('#')[0]
+    return filename || null
+  } catch {
+    return null
+  }
+}
+
 export async function updateEvent(id: string, formData: FormData) {
   const supabase = await createClient()
 
+  // Fetch current event to check the current banner_url before updating
+  const { data: currentEvent } = await supabase
+    .from('events')
+    .select('banner_url')
+    .eq('id', id)
+    .single()
+
   const eventType = (formData.get('event_type') as string) || 'closed'
   const name = formData.get('name') as string
+  const newBannerUrl = (formData.get('banner_url') as string) || null
 
   // If switching to open and no slug exists, generate one
   let registrationSlug: string | null = (formData.get('registration_slug') as string) || null
@@ -75,11 +96,19 @@ export async function updateEvent(id: string, formData: FormData) {
       event_type: eventType,
       registration_slug: registrationSlug,
       max_registrations: formData.get('max_registrations') ? Number(formData.get('max_registrations')) : null,
-      banner_url: (formData.get('banner_url') as string) || null,
+      banner_url: newBannerUrl,
     })
     .eq('id', id)
 
   if (error) return { error: error.message }
+
+  // Clean up old banner from storage if it has changed
+  if (currentEvent && currentEvent.banner_url !== newBannerUrl) {
+    const oldFilename = getStorageFilename(currentEvent.banner_url)
+    if (oldFilename) {
+      await supabase.storage.from('banners').remove([oldFilename])
+    }
+  }
 
   revalidatePath(`/events/${id}`)
   return { success: true }
@@ -88,9 +117,24 @@ export async function updateEvent(id: string, formData: FormData) {
 export async function deleteEvent(id: string) {
   const supabase = await createClient()
 
+  // Fetch current event to check for banner_url before deletion
+  const { data: currentEvent } = await supabase
+    .from('events')
+    .select('banner_url')
+    .eq('id', id)
+    .single()
+
   const { error } = await supabase.from('events').delete().eq('id', id)
 
   if (error) return { error: error.message }
+
+  // Clean up physical banner file if it exists in Supabase Storage
+  if (currentEvent?.banner_url) {
+    const filename = getStorageFilename(currentEvent.banner_url)
+    if (filename) {
+      await supabase.storage.from('banners').remove([filename])
+    }
+  }
 
   revalidatePath('/events')
   redirect('/events')

@@ -13,6 +13,7 @@ import { fieldCls, labelCls } from '@/lib/form-styles'
 import { toast } from 'sonner'
 import type { Event } from '@/lib/types'
 import { EventBannerInput } from '@/components/event-banner-input'
+import { getOptimizedBannerUrl } from '@/lib/images'
 
 export default function EventOverviewPage() {
   const { id } = useParams<{ id: string }>()
@@ -439,7 +440,7 @@ export default function EventOverviewPage() {
             <div className="aspect-video w-full overflow-hidden bg-void/50 relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={event.banner_url}
+                src={getOptimizedBannerUrl(event.banner_url, 'web')}
                 alt={`${event.name} Banner`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />

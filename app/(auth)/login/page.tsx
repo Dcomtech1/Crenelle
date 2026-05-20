@@ -13,16 +13,19 @@ export default function LoginPage() {
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
+    
     try {
       const data = Object.fromEntries(formData.entries())
       loginSchema.parse(data)
-      const result = await login(formData)
-      if (result?.error) {
-        setError(result.error)
-        setLoading(false)
-      }
     } catch (err) {
       setError(err instanceof ZodError ? err.issues[0].message : 'An unexpected error occurred')
+      setLoading(false)
+      return
+    }
+
+    const result = await login(formData)
+    if (result?.error) {
+      setError(result.error)
       setLoading(false)
     }
   }

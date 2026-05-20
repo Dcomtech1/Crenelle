@@ -21,13 +21,17 @@ type EntryWithGuest = {
 type GuestName = Pick<Guest, 'name'>
 
 type InvitationRaw = Pick<Invitation, 'id' | 'party_size' | 'seat_info' | 'status'> & {
-  guest: GuestName[]
+  guest: GuestName | GuestName[]
 }
 
 type EntryLogRaw = Pick<EntryLog, 'id' | 'scanned_at'> & {
-  invitation: (Pick<Invitation, 'id' | 'party_size' | 'seat_info'> & {
-    guest: GuestName[]
-  })[]
+  invitation:
+    | (Pick<Invitation, 'id' | 'party_size' | 'seat_info'> & {
+        guest: GuestName | GuestName[]
+      })
+    | (Pick<Invitation, 'id' | 'party_size' | 'seat_info'> & {
+        guest: GuestName | GuestName[]
+      })[]
 }
 
 export default function LiveDashboardPage() {
@@ -59,7 +63,8 @@ export default function LiveDashboardPage() {
 
       const logsPerInv = new Map<string, number>()
       logsArr.forEach((l) => {
-        const invId = l.invitation[0]?.id
+        const invRaw = Array.isArray(l.invitation) ? l.invitation[0] : l.invitation
+        const invId = invRaw?.id
         if (invId) logsPerInv.set(invId, (logsPerInv.get(invId) ?? 0) + 1)
       })
 
@@ -67,15 +72,19 @@ export default function LiveDashboardPage() {
       setTotalSeats(invArr.reduce((a, i) => a + (i.party_size ?? 1), 0))
       setArrived(logsArr.length)
       setArrivedSeats(logsPerInv.size)
-      setEntries(logsArr.map(l => ({
-        id: l.id,
-        scanned_at: l.scanned_at,
-        invitation: {
-          party_size: l.invitation[0]?.party_size ?? 1,
-          seat_info:  l.invitation[0]?.seat_info ?? null,
-          guest:      l.invitation[0]?.guest[0] ?? { name: 'Unknown' }
+      setEntries(logsArr.map(l => {
+        const invRaw = Array.isArray(l.invitation) ? l.invitation[0] : l.invitation
+        const guestRaw = invRaw ? (Array.isArray(invRaw.guest) ? invRaw.guest[0] : invRaw.guest) : null
+        return {
+          id: l.id,
+          scanned_at: l.scanned_at,
+          invitation: {
+            party_size: invRaw?.party_size ?? 1,
+            seat_info:  invRaw?.seat_info ?? null,
+            guest:      guestRaw ?? { name: 'Unknown' }
+          }
         }
-      })))
+      }))
       setPending(
         invArr
           .map((i) => {
@@ -84,11 +93,14 @@ export default function LiveDashboardPage() {
             return { ...i, remainingInParty }
           })
           .filter((i) => i.remainingInParty > 0)
-          .map((i) => ({
-            name:       i.guest[0]?.name ?? 'Unknown',
-            party_size: i.remainingInParty,
-            seat_info:  i.seat_info
-          }))
+          .map((i) => {
+            const guestRaw = Array.isArray(i.guest) ? i.guest[0] : i.guest
+            return {
+              name:       guestRaw?.name ?? 'Unknown',
+              party_size: i.remainingInParty,
+              seat_info:  i.seat_info
+            }
+          })
       )
     }
 

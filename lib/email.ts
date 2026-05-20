@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getOptimizedBannerUrl } from './images'
 
 // Lazy init — avoids crash at build time when env var isn't set yet
 let _resend: Resend | null = null
@@ -135,7 +136,7 @@ export async function sendInvitationEmail({
       ${event.banner_url ? `
       <!-- Banner Image -->
       <div style="margin-bottom:24px;border:1px solid rgba(12,11,9,0.08);border-radius:2px;overflow:hidden;background-color:#F4F1EC;">
-        <img src="${event.banner_url}" alt="${event.name} Banner" style="width:100%;height:auto;display:block;border:none;" />
+        <img src="${getOptimizedBannerUrl(event.banner_url, 'email')}" alt="${event.name} Banner" style="width:100%;height:auto;display:block;border:none;" />
       </div>
       ` : ''}
 
@@ -337,7 +338,7 @@ export async function sendReminderEmailsDirect({
       ${event.banner_url ? `
       <!-- Banner Image -->
       <div style="margin-bottom:24px;border:1px solid rgba(12,11,9,0.08);border-radius:2px;overflow:hidden;background-color:#F4F1EC;">
-        <img src="${event.banner_url}" alt="${event.name} Banner" style="width:100%;height:auto;display:block;border:none;" />
+        <img src="${getOptimizedBannerUrl(event.banner_url, 'email')}" alt="${event.name} Banner" style="width:100%;height:auto;display:block;border:none;" />
       </div>
       ` : ''}
 

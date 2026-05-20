@@ -30,18 +30,19 @@ export default function SignupPage() {
       // Client-side validation
       const data = Object.fromEntries(formData.entries())
       signupSchema.parse(data)
-
-      const result = await signup(formData)
-      if (result?.error) {
-        setError(result.error)
-        setLoading(false)
-      }
     } catch (err) {
       if (err instanceof ZodError) {
         setError(err.issues[0].message)
       } else {
         setError('An unexpected error occurred')
       }
+      setLoading(false)
+      return
+    }
+
+    const result = await signup(formData)
+    if (result?.error) {
+      setError(result.error)
       setLoading(false)
     }
   }

@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import ScannerClient from '@/components/scanner/ScannerClient'
 
 export default async function ScannerPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Validate the scanner token server-side; also join the event to check its status
   const { data: scannerLink } = await supabase

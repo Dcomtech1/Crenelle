@@ -55,7 +55,7 @@ export function EventsHeader({
         ) : (
           <button
             onClick={() => setIsSearchExpanded(true)}
-            className="p-2 border border-transparent hover:border-border hover:bg-foreground/[0.04] text-muted-foreground hover:text-foreground transition-all ml-auto"
+            className="p-2 border border-transparent hover:border-border hover:bg-foreground/4 text-muted-foreground hover:text-foreground transition-all ml-auto"
             aria-label="Search events"
           >
             <Search className="size-4" />

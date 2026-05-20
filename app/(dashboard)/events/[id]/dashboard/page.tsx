@@ -18,6 +18,18 @@ type EntryWithGuest = {
   }
 }
 
+type GuestName = Pick<Guest, 'name'>
+
+type InvitationRaw = Pick<Invitation, 'id' | 'party_size' | 'seat_info' | 'status'> & {
+  guest: GuestName[]
+}
+
+type EntryLogRaw = Pick<EntryLog, 'id' | 'scanned_at'> & {
+  invitation: (Pick<Invitation, 'id' | 'party_size' | 'seat_info'> & {
+    guest: GuestName[]
+  })[]
+}
+
 export default function LiveDashboardPage() {
   const { id: eventId } = useParams<{ id: string }>()
   const [totalInvited, setTotalInvited] = useState(0)
@@ -42,36 +54,38 @@ export default function LiveDashboardPage() {
         .in('invitation_id', (invitations ?? []).map(i => i.id))
         .order('scanned_at', { ascending: false })
 
-      const logsArr = (logs ?? []) as any[]
-      const invArr  = (invitations ?? []) as any[]
+      const logsArr = (logs ?? []) as EntryLogRaw[]
+      const invArr  = (invitations ?? []) as InvitationRaw[]
 
       const logsPerInv = new Map<string, number>()
       logsArr.forEach((l) => {
-        const invId = l.invitation?.id
+        const invId = l.invitation[0]?.id
         if (invId) logsPerInv.set(invId, (logsPerInv.get(invId) ?? 0) + 1)
       })
 
       setTotalInvited(invArr.length)
-      setTotalSeats(invArr.reduce((a: number, i: any) => a + (i.party_size ?? 1), 0))
+      setTotalSeats(invArr.reduce((a, i) => a + (i.party_size ?? 1), 0))
       setArrived(logsArr.length)
       setArrivedSeats(logsPerInv.size)
       setEntries(logsArr.map(l => ({
-        ...l,
+        id: l.id,
+        scanned_at: l.scanned_at,
         invitation: {
-          ...l.invitation,
-          guest: Array.isArray(l.invitation.guest) ? l.invitation.guest[0] : l.invitation.guest
+          party_size: l.invitation[0]?.party_size ?? 1,
+          seat_info:  l.invitation[0]?.seat_info ?? null,
+          guest:      l.invitation[0]?.guest[0] ?? { name: 'Unknown' }
         }
       })))
       setPending(
         invArr
-          .map((i: any) => {
-            const arrivedInParty  = logsPerInv.get(i.id) ?? 0
+          .map((i) => {
+            const arrivedInParty   = logsPerInv.get(i.id) ?? 0
             const remainingInParty = (i.party_size ?? 1) - arrivedInParty
             return { ...i, remainingInParty }
           })
-          .filter((i: any) => i.remainingInParty > 0)
-          .map((i: any) => ({
-            name:       (Array.isArray(i.guest) ? i.guest[0] : i.guest)?.name ?? 'Unknown',
+          .filter((i) => i.remainingInParty > 0)
+          .map((i) => ({
+            name:       i.guest[0]?.name ?? 'Unknown',
             party_size: i.remainingInParty,
             seat_info:  i.seat_info
           }))
@@ -177,7 +191,7 @@ export default function LiveDashboardPage() {
                   className="flex items-center justify-between px-4 py-3 bg-admitted/5 border border-admitted/10 hover:border-admitted/20 transition-colors"
                 >
                   <div>
-                    <p className="font-mono text-sm text-foreground">{(entry.invitation?.guest as any)?.name}</p>
+                    <p className="font-mono text-sm text-foreground">{entry.invitation.guest.name}</p>
                     <p className="font-mono text-[10px] text-foreground/60 uppercase tracking-widest mt-0.5">
                       {entry.invitation?.seat_info && <span className="mr-3">{entry.invitation.seat_info}</span>}
                       {new Date(entry.scanned_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}

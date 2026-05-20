@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         {/* Structural watermark */}
         <div
-          className="absolute bottom-0 right-0 font-display font-bold text-foreground/[0.04] leading-none select-none pointer-events-none"
+          className="absolute bottom-0 right-0 font-display font-bold text-foreground/4 leading-none select-none pointer-events-none"
           style={{ fontSize: '26vw', lineHeight: 0.85 }}
           aria-hidden="true"
         >

@@ -75,7 +75,7 @@ export function StatusChangeDialog({
                 onClick={() => setSelected(s.value)}
                 className={`w-full text-left px-4 py-3.5 border transition-all ${
                   isActive
-                    ? 'border-copper bg-copper/[0.08] text-foreground'
+                    ? 'border-copper bg-copper/8 text-foreground'
                     : 'border-border hover:border-foreground/30 text-foreground'
                 }`}
               >

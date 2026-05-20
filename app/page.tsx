@@ -55,7 +55,7 @@ export default async function HomePage() {
 
         {/* Watermark text — structural atmosphere */}
         <div
-          className="absolute top-1/2 left-0 right-0 -translate-y-1/2 font-display font-bold text-center pointer-events-none select-none text-foreground/[0.04]"
+          className="absolute top-1/2 left-0 right-0 -translate-y-1/2 font-display font-bold text-center pointer-events-none select-none text-foreground/4"
           style={{
             fontSize: 'clamp(80px, 18vw, 260px)',
             letterSpacing: '-0.04em',
@@ -238,7 +238,7 @@ export default async function HomePage() {
             ].map(step => (
               <div key={step.n} className="bg-card px-8 py-10 group hover:bg-muted/30 transition-colors">
                 <p
-                  className="font-display font-bold text-foreground/[0.05] leading-none mb-6 select-none"
+                  className="font-display font-bold text-foreground/5 leading-none mb-6 select-none"
                   style={{ fontSize: 'clamp(56px, 8vw, 96px)' }}
                 >
                   {step.n}
@@ -314,7 +314,7 @@ export default async function HomePage() {
       <section className="py-32 px-8 md:px-14 relative overflow-hidden">
         {/* Background number — structural */}
         <div
-          className="absolute inset-0 flex items-center justify-center font-display font-bold text-parchment/[0.02] pointer-events-none select-none"
+          className="absolute inset-0 flex items-center justify-center font-display font-bold text-parchment/2 pointer-events-none select-none"
           style={{ fontSize: '35vw', lineHeight: 1 }}
           aria-hidden="true"
         >

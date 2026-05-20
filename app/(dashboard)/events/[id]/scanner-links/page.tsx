@@ -171,7 +171,7 @@ export default function ScannerLinksPage() {
                 <button
                   onClick={() => setDeleteTarget(link)}
                   aria-label={`Delete scanner link ${link.label}`}
-                  className="inline-flex items-center justify-center font-sans text-[10px] font-semibold uppercase text-destructive/60 border border-destructive/20 hover:border-destructive/50 hover:text-destructive hover:bg-destructive/[0.06] px-3 h-9 transition-all"
+                  className="inline-flex items-center justify-center font-sans text-[10px] font-semibold uppercase text-destructive/60 border border-destructive/20 hover:border-destructive/50 hover:text-destructive hover:bg-destructive/6 px-3 h-9 transition-all"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -182,7 +182,7 @@ export default function ScannerLinksPage() {
       )}
 
       {/* Info panel */}
-      <div className="mt-8 border-l-2 border-copper bg-copper/[0.06] p-5">
+      <div className="mt-8 border-l-2 border-copper bg-copper/6 p-5">
         <p className="font-sans text-xs text-foreground/70 leading-relaxed">
           <span className="font-semibold text-copper">How to use:</span>{' '}
           Copy a link and send it to your usher via WhatsApp or SMS.

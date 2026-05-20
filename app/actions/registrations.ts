@@ -119,7 +119,7 @@ export async function acceptRegistration(registrationId: string, eventId: string
   // 5. Get event details for the email
   const { data: event } = await supabase
     .from('events')
-    .select('name, date, time, venue, description')
+    .select('name, date, time, venue, description, banner_url')
     .eq('id', eventId)
     .single()
 
@@ -170,7 +170,7 @@ export async function sendReminderEmails(eventId: string, customMessage: string)
   // Get event
   const { data: event } = await supabase
     .from('events')
-    .select('name, date, time, venue, event_type')
+    .select('name, date, time, venue, event_type, banner_url')
     .eq('id', eventId)
     .single()
 

@@ -3,14 +3,15 @@
 import { useState, useEffect, useTransition } from 'react'
 import { useParams } from 'next/navigation'
 import { Plus, Pencil, X, Users } from 'lucide-react'
-import { addGuest, updateGuest, deleteGuest } from '@/app/actions/guests'
+import { addGuest, updateGuest, deleteGuest, addMultipleGuests } from '@/app/actions/guests'
 import { createClient } from '@/lib/supabase/client'
-import { fieldCls, labelCls } from '@/lib/form-styles'
+import { fieldCls, labelCls, hintCls } from '@/lib/form-styles'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import type { Invitation, Guest } from '@/lib/types'
 
@@ -63,6 +64,22 @@ export default function GuestsPage() {
     })
   }
 
+  async function handleBulkAdd(emailsText: string, partySize: number) {
+    startTransition(async () => {
+      const result = await addMultipleGuests(eventId, emailsText, partySize)
+      if (result?.error) toast.error(result.error)
+      else {
+        if (result?.warning) {
+          toast.warning(result.warning)
+        } else {
+          toast.success(`Successfully imported ${result?.count} guest(s)`)
+        }
+        setAddOpen(false)
+        loadGuests()
+      }
+    })
+  }
+
   async function handleUpdate(formData: FormData) {
     if (!editGuest) return
     startTransition(async () => {
@@ -93,9 +110,24 @@ export default function GuestsPage() {
           </DialogTrigger>
           <DialogContent className="bg-background border-2 border-foreground/20 max-w-md">
             <DialogHeader>
-              <DialogTitle className="font-display text-3xl uppercase text-foreground">Add Guest</DialogTitle>
+              <DialogTitle className="font-display text-3xl uppercase text-foreground">Add Guests</DialogTitle>
             </DialogHeader>
-            <GuestForm onSubmit={handleAdd} loading={isPending} prefix="add" />
+            <Tabs defaultValue="single" className="w-full mt-2">
+              <TabsList variant="line" className="border-b-2 border-foreground/10 w-full justify-start mb-4">
+                <TabsTrigger value="single" className="font-mono text-xs uppercase tracking-widest px-4 py-2 border-b-2 border-transparent data-[state=active]:border-signal">
+                  Single Guest
+                </TabsTrigger>
+                <TabsTrigger value="bulk" className="font-mono text-xs uppercase tracking-widest px-4 py-2 border-b-2 border-transparent data-[state=active]:border-signal">
+                  Multiple Guests
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="single" className="mt-0">
+                <GuestForm onSubmit={handleAdd} loading={isPending} prefix="add" />
+              </TabsContent>
+              <TabsContent value="bulk" className="mt-0">
+                <BulkGuestForm onSubmit={handleBulkAdd} loading={isPending} />
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </div>
@@ -242,6 +274,67 @@ function GuestForm({
 
       <Button type="submit" variant="signal" className="w-full h-12 text-sm mt-2" disabled={loading}>
         {loading ? 'SAVING...' : 'SAVE GUEST'}
+      </Button>
+    </form>
+  )
+}
+
+function BulkGuestForm({
+  onSubmit,
+  loading,
+}: {
+  onSubmit: (emailsText: string, partySize: number) => void
+  loading: boolean
+}) {
+  const [emailsText, setEmailsText] = useState('')
+  const [partySize, setPartySize] = useState(1)
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!emailsText.trim()) {
+      toast.error('Please enter at least one email address.')
+      return
+    }
+    onSubmit(emailsText, partySize)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5 mt-2">
+      <div className="flex flex-col gap-2">
+        <label htmlFor="bulk-emails" className={labelCls}>Guest Emails *</label>
+        <textarea
+          id="bulk-emails"
+          value={emailsText}
+          onChange={(e) => setEmailsText(e.target.value)}
+          placeholder="ngozi@example.com&#10;olana@gatekeeper.dev, guest@crenelle.org"
+          required
+          rows={6}
+          className={`${fieldCls} py-3 resize-none font-mono text-xs h-36`}
+        />
+        <p className="font-mono text-[9px] uppercase tracking-wider text-foreground/40 leading-relaxed">
+          Separate multiple email addresses using newlines, commas, or semicolons.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="bulk-party" className={labelCls}>Admits per Guest (party size) *</label>
+        <input
+          id="bulk-party"
+          type="number"
+          min="1"
+          max="20"
+          value={partySize}
+          onChange={(e) => setPartySize(Number(e.target.value))}
+          required
+          className={fieldCls}
+        />
+        <p className="font-mono text-[9px] uppercase tracking-wider text-foreground/40">
+          This party size will be assigned to each guest in the list.
+        </p>
+      </div>
+
+      <Button type="submit" variant="signal" className="w-full h-12 text-sm mt-2" disabled={loading}>
+        {loading ? 'IMPORTING...' : 'SAVE GUESTS'}
       </Button>
     </form>
   )

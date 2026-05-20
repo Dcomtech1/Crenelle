@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Pencil, Trash2, Save, X, Copy, Lock, Globe, Mail, Send } from 'lucide-react'
+import { Pencil, Trash2, Save, X, Copy, Lock, Globe, Mail, Send, Image as ImageIcon } from 'lucide-react'
 import { updateEvent, deleteEvent } from '@/app/actions/events'
 import { sendReminderEmails } from '@/app/actions/registrations'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fieldCls, labelCls } from '@/lib/form-styles'
 import { toast } from 'sonner'
 import type { Event } from '@/lib/types'
+import { EventBannerInput } from '@/components/event-banner-input'
 
 export default function EventOverviewPage() {
   const { id } = useParams<{ id: string }>()
@@ -233,6 +234,8 @@ export default function EventOverviewPage() {
             </select>
           </div>
 
+          <EventBannerInput defaultValue={event.banner_url} />
+
           <div className="flex flex-col gap-2">
             <label htmlFor="ev-desc" className={labelCls}>Description</label>
             <textarea
@@ -260,8 +263,10 @@ export default function EventOverviewPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="brutalist-card">
+    <div className="max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* Left Column */}
+      <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+        <div className="brutalist-card">
         {/* Card header */}
         <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-foreground/20">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">EVENT_DETAILS</p>
@@ -422,6 +427,36 @@ export default function EventOverviewPage() {
           </div>
         </DialogContent>
       </Dialog>
+      </div> {/* End Left Column */}
+
+      {/* Right Column (Banner frame) */}
+      <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8 space-y-6 print:hidden">
+        <div className="brutalist-card p-0 overflow-hidden group">
+          <div className="border-b-2 border-foreground/20 p-4 bg-foreground/5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-foreground/70">EVENT_BANNER // ATTACHMENT</p>
+          </div>
+          {event.banner_url ? (
+            <div className="aspect-video w-full overflow-hidden bg-void/50 relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={event.banner_url}
+                alt={`${event.name} Banner`}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center border-dashed border-2 border-foreground/15 m-6 p-6 text-center select-none bg-void/5">
+              <ImageIcon className="h-8 w-8 text-foreground/30 mb-2" />
+              <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/50 font-bold">
+                NO_BANNER_ATTACHED
+              </p>
+              <p className="font-mono text-[9px] uppercase tracking-wide text-foreground/40 mt-2 max-w-[220px] leading-relaxed">
+                Click Edit above to upload a banner for emails and event pages.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

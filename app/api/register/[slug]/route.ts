@@ -15,7 +15,7 @@ export async function GET(
   // Fetch the event by registration_slug
   const { data: event, error } = await supabase
     .from('events')
-    .select('id, name, date, time, venue, description, status, event_type, max_registrations')
+    .select('id, name, date, time, venue, description, status, event_type, max_registrations, banner_url')
     .eq('registration_slug', slug)
     .eq('event_type', 'open')
     .single()
@@ -46,5 +46,6 @@ export async function GET(
     status: event.status,
     max_registrations: event.max_registrations,
     registration_count: count ?? 0,
+    banner_url: event.banner_url,
   })
 }

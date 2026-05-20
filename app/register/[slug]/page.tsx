@@ -15,6 +15,7 @@ interface EventInfo {
   status: string
   max_registrations: number | null
   registration_count: number
+  banner_url?: string | null
 }
 
 export default function PublicRegistrationPage() {
@@ -124,6 +125,17 @@ export default function PublicRegistrationPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
       <div className="max-w-lg w-full">
+        {event.banner_url && (
+          <div className="border-2 border-foreground/20 border-b-0 aspect-video w-full overflow-hidden bg-void/10 select-none">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={event.banner_url}
+              alt={`${event.name} banner`}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
         {/* Event header */}
         <div className="border-2 border-foreground/20 p-6 mb-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-signal mb-2">
@@ -259,7 +271,7 @@ export default function PublicRegistrationPage() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="font-mono text-[8px] uppercase tracking-[0.3em] text-foreground/30">
-            GATEKEEP_ENTRY_SYSTEM // SECURE_REGISTRATION
+            CRENELLE_ENTRY_SYSTEM // SECURE_REGISTRATION
           </p>
         </div>
       </div>

@@ -14,7 +14,7 @@ const dmMono = DM_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Event Registration — GateKeep',
+  title: 'Event Registration — Crenelle',
   description: 'Register for an upcoming event.',
 }
 

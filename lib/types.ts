@@ -16,6 +16,7 @@ export interface Event {
   event_type: EventType
   registration_slug: string | null
   max_registrations: number | null
+  banner_url?: string | null
   created_at: string
   updated_at: string
 }

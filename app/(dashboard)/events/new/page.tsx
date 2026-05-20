@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, Lock, Globe } from 'lucide-react'
 import { createEvent } from '@/app/actions/events'
 import { Button } from '@/components/ui/button'
+import { EventBannerInput } from '@/components/event-banner-input'
 import { fieldCls, labelCls, hintCls } from '@/lib/form-styles'
 
 export default function NewEventPage() {
@@ -181,6 +182,8 @@ export default function NewEventPage() {
             </div>
           </div>
         )}
+
+        <EventBannerInput />
 
         <div className="flex flex-col gap-2">
           <label htmlFor="new-ev-desc" className={labelCls}>Description</label>

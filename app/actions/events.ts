@@ -36,6 +36,7 @@ export async function createEvent(formData: FormData) {
       event_type: eventType,
       registration_slug: eventType === 'open' ? generateSlug(name) : null,
       max_registrations: formData.get('max_registrations') ? Number(formData.get('max_registrations')) : null,
+      banner_url: (formData.get('banner_url') as string) || null,
     })
     .select()
     .single()
@@ -74,6 +75,7 @@ export async function updateEvent(id: string, formData: FormData) {
       event_type: eventType,
       registration_slug: registrationSlug,
       max_registrations: formData.get('max_registrations') ? Number(formData.get('max_registrations')) : null,
+      banner_url: (formData.get('banner_url') as string) || null,
     })
     .eq('id', id)
 

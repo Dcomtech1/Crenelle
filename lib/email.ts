@@ -9,7 +9,7 @@ function getResend() {
 }
 
 // The "from" address — must be verified in Resend dashboard
-const FROM_EMAIL = process.env.EMAIL_FROM || 'GateKeep <onboarding@resend.dev>'
+const FROM_EMAIL = process.env.EMAIL_FROM || 'Crenelle <onboarding@resend.dev>'
 
 export interface EventDetails {
   name: string
@@ -68,64 +68,131 @@ export async function sendInvitationEmail({
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <style>
+    :root {
+      color-scheme: light dark;
+      supported-color-schemes: light dark;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100% !important;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .bg-body {
+        background-color: #0C0B09 !important;
+      }
+      .bg-card {
+        background-color: #171512 !important;
+      }
+      .border-card {
+        border-color: rgba(238, 234, 227, 0.10) !important;
+      }
+      .text-primary {
+        color: #EEEAE3 !important;
+      }
+      .text-secondary {
+        color: #9E9890 !important;
+      }
+      .text-accent {
+        color: #D4A050 !important;
+      }
+      .qr-wrapper {
+        background-color: #EEEAE3 !important;
+        border: 2px solid rgba(238, 234, 227, 0.20) !important;
+      }
+      .rule-accent {
+        background: linear-gradient(to right, transparent, rgba(191, 132, 48, 0.6), transparent) !important;
+      }
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background-color:#0A0A0A;font-family:'Courier New',monospace;">
+<body class="bg-body" style="margin:0;padding:0;background-color:#F4F1EC;font-family:'Courier New',Courier,monospace;-webkit-font-smoothing:antialiased;">
   <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
     
-    <!-- Header -->
-    <div style="border:2px solid #F0EDE8;padding:30px;margin-bottom:0;">
-      <p style="font-size:10px;letter-spacing:3px;color:#FFD600;margin:0 0 8px 0;text-transform:uppercase;">
-        YOU'RE IN — INVITATION CONFIRMED
-      </p>
-      <h1 style="font-size:36px;color:#F0EDE8;margin:0;text-transform:uppercase;letter-spacing:-1px;">
-        ${event.name}
-      </h1>
-    </div>
-
-    <!-- Event Details -->
-    <div style="border:2px solid #F0EDE8;border-top:none;padding:24px 30px;">
-      <table style="width:100%;border-collapse:collapse;">
+    <!-- Outer Card -->
+    <div class="bg-card border-card" style="background-color:#FFFFFF;border:1px solid rgba(12,11,9,0.14);border-radius:2px;padding:40px;box-shadow:0 4px 12px rgba(12,11,9,0.02);">
+      
+      <!-- Top Branding -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
         <tr>
-          <td style="padding:8px 0;font-size:10px;letter-spacing:2px;color:rgba(240,237,232,0.6);text-transform:uppercase;width:100px;">DATE</td>
-          <td style="padding:8px 0;font-size:14px;color:#F0EDE8;">${eventDate}</td>
-        </tr>
-        ${event.time ? `
-        <tr>
-          <td style="padding:8px 0;font-size:10px;letter-spacing:2px;color:rgba(240,237,232,0.6);text-transform:uppercase;">TIME</td>
-          <td style="padding:8px 0;font-size:14px;color:#F0EDE8;">${event.time.slice(0, 5)}</td>
-        </tr>` : ''}
-        <tr>
-          <td style="padding:8px 0;font-size:10px;letter-spacing:2px;color:rgba(240,237,232,0.6);text-transform:uppercase;">VENUE</td>
-          <td style="padding:8px 0;font-size:14px;color:#F0EDE8;">${event.venue}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;font-size:10px;letter-spacing:2px;color:rgba(240,237,232,0.6);text-transform:uppercase;">GUEST</td>
-          <td style="padding:8px 0;font-size:14px;color:#F0EDE8;">${recipientName}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;font-size:10px;letter-spacing:2px;color:rgba(240,237,232,0.6);text-transform:uppercase;">ADMITS</td>
-          <td style="padding:8px 0;font-size:14px;color:#FFD600;font-weight:bold;">1 PERSON</td>
+          <td>
+            <span class="text-accent" style="font-size:10px;font-weight:600;letter-spacing:4px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">CRENELLE</span>
+          </td>
+          <td style="text-align:right;">
+            <span class="text-secondary" style="font-size:9px;letter-spacing:1px;color:#5C5850;text-transform:uppercase;">Entry System</span>
+          </td>
         </tr>
       </table>
-    </div>
 
-    <!-- QR Code -->
-    <div style="border:2px solid #F0EDE8;border-top:none;padding:30px;text-align:center;">
-      <p style="font-size:10px;letter-spacing:3px;color:rgba(240,237,232,0.6);margin:0 0 16px 0;text-transform:uppercase;">
-        YOUR ENTRY PASS — SCAN AT THE GATE
-      </p>
-      <div style="display:inline-block;border:2px solid rgba(240,237,232,0.3);padding:8px;background:#F0EDE8;">
-        <img src="${qrUrl}" alt="Entry QR Code" width="200" height="200" style="display:block;" />
+      <!-- Title / Header -->
+      <div style="margin-bottom:30px;">
+        <p class="text-accent" style="font-size:11px;font-weight:bold;letter-spacing:3px;color:#BF8430;margin:0 0 10px 0;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          CONFIRMED ENTRY PASS
+        </p>
+        <h1 class="text-primary" style="font-size:32px;line-height:1.2;font-weight:800;color:#0C0B09;margin:0;text-transform:uppercase;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          ${event.name}
+        </h1>
       </div>
-      <p style="font-size:10px;letter-spacing:2px;color:rgba(240,237,232,0.4);margin:16px 0 0 0;text-transform:uppercase;">
-        This QR code is unique to you. Do not share it.
-      </p>
+
+      <!-- Accent line -->
+      <div class="rule-accent" style="height:1px;background:linear-gradient(to right, transparent, rgba(191,132,48,0.3), transparent);margin-bottom:30px;"></div>
+
+      <!-- Details Table -->
+      <div style="margin-bottom:35px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;width:120px;font-weight:600;">DATE</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${eventDate}</td>
+          </tr>
+          ${event.time ? `
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">TIME</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${event.time.slice(0, 5)}</td>
+          </tr>` : ''}
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">VENUE</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${event.venue}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">GUEST</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${recipientName}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">ADMITS</td>
+            <td class="text-accent" style="padding:10px 0;font-size:15px;color:#BF8430;font-weight:bold;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">1 PERSON</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Divider -->
+      <div class="rule-accent" style="height:1px;background:linear-gradient(to right, transparent, rgba(191,132,48,0.2), transparent);margin-bottom:35px;"></div>
+
+      <!-- QR Section -->
+      <div style="text-align:center;">
+        <p class="text-secondary" style="font-size:10px;letter-spacing:3px;color:#5C5850;margin:0 0 20px 0;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          SCAN AT THE GATE FOR ENTRY
+        </p>
+        <div class="qr-wrapper" style="display:inline-block;border:1px solid rgba(12,11,9,0.08);padding:16px;background-color:#F4F1EC;border-radius:2px;">
+          <img src="${qrUrl}" alt="Entry QR Code" width="220" height="220" style="display:block;border:none;" />
+        </div>
+        <p class="text-secondary" style="font-size:10px;letter-spacing:1px;color:#5C5850;margin:20px 0 0 0;line-height:1.5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          This pass is unique to you. Do not replicate or share.
+        </p>
+      </div>
+
     </div>
 
-    <!-- Footer -->
-    <div style="padding:20px 0;text-align:center;">
-      <p style="font-size:8px;letter-spacing:3px;color:rgba(240,237,232,0.3);margin:0;text-transform:uppercase;">
-        GATEKEEP_ENTRY_SYSTEM // VERIFIED_INVITATION
+    <!-- Micro Footer -->
+    <div style="padding:30px 0 10px 0;text-align:center;">
+      <p class="text-secondary" style="font-size:9px;letter-spacing:2.5px;color:#5C5850;margin:0;text-transform:uppercase;">
+        CRENELLE // VERIFIED_INVITATION
       </p>
     </div>
   </div>
@@ -191,59 +258,131 @@ export async function sendReminderEmailsDirect({
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <style>
+    :root {
+      color-scheme: light dark;
+      supported-color-schemes: light dark;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100% !important;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .bg-body {
+        background-color: #0C0B09 !important;
+      }
+      .bg-card {
+        background-color: #171512 !important;
+      }
+      .border-card {
+        border-color: rgba(238, 234, 227, 0.10) !important;
+      }
+      .text-primary {
+        color: #EEEAE3 !important;
+      }
+      .text-secondary {
+        color: #9E9890 !important;
+      }
+      .text-accent {
+        color: #D4A050 !important;
+      }
+      .qr-wrapper {
+        background-color: #EEEAE3 !important;
+        border: 2px solid rgba(238, 234, 227, 0.20) !important;
+      }
+      .rule-accent {
+        background: linear-gradient(to right, transparent, rgba(191, 132, 48, 0.6), transparent) !important;
+      }
+      .message-callout {
+        background-color: rgba(191, 132, 48, 0.08) !important;
+        border-color: rgba(191, 132, 48, 0.3) !important;
+        color: #EEEAE3 !important;
+      }
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background-color:#0A0A0A;font-family:'Courier New',monospace;">
+<body class="bg-body" style="margin:0;padding:0;background-color:#F4F1EC;font-family:'Courier New',Courier,monospace;-webkit-font-smoothing:antialiased;">
   <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
     
-    <!-- Header -->
-    <div style="border:2px solid #F0EDE8;padding:30px;margin-bottom:0;">
-      <p style="font-size:10px;letter-spacing:3px;color:#FFD600;margin:0 0 8px 0;text-transform:uppercase;">
-        EVENT REMINDER
-      </p>
-      <h1 style="font-size:36px;color:#F0EDE8;margin:0;text-transform:uppercase;letter-spacing:-1px;">
-        ${event.name}
-      </h1>
-    </div>
-
-    <!-- Custom message -->
-    ${customMessage ? `
-    <div style="border:2px solid #F0EDE8;border-top:none;padding:24px 30px;">
-      <p style="font-size:14px;color:#F0EDE8;line-height:1.6;margin:0;white-space:pre-wrap;">${customMessage}</p>
-    </div>` : ''}
-
-    <!-- Event Details -->
-    <div style="border:2px solid #F0EDE8;border-top:none;padding:24px 30px;">
-      <table style="width:100%;border-collapse:collapse;">
+    <!-- Outer Card -->
+    <div class="bg-card border-card" style="background-color:#FFFFFF;border:1px solid rgba(12,11,9,0.14);border-radius:2px;padding:40px;box-shadow:0 4px 12px rgba(12,11,9,0.02);">
+      
+      <!-- Top Branding -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
         <tr>
-          <td style="padding:8px 0;font-size:10px;letter-spacing:2px;color:rgba(240,237,232,0.6);text-transform:uppercase;width:100px;">DATE</td>
-          <td style="padding:8px 0;font-size:14px;color:#F0EDE8;">${eventDate}</td>
-        </tr>
-        ${event.time ? `
-        <tr>
-          <td style="padding:8px 0;font-size:10px;letter-spacing:2px;color:rgba(240,237,232,0.6);text-transform:uppercase;">TIME</td>
-          <td style="padding:8px 0;font-size:14px;color:#F0EDE8;">${event.time.slice(0, 5)}</td>
-        </tr>` : ''}
-        <tr>
-          <td style="padding:8px 0;font-size:10px;letter-spacing:2px;color:rgba(240,237,232,0.6);text-transform:uppercase;">VENUE</td>
-          <td style="padding:8px 0;font-size:14px;color:#F0EDE8;">${event.venue}</td>
+          <td>
+            <span class="text-accent" style="font-size:10px;font-weight:600;letter-spacing:4px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">CRENELLE</span>
+          </td>
+          <td style="text-align:right;">
+            <span class="text-secondary" style="font-size:9px;letter-spacing:1px;color:#5C5850;text-transform:uppercase;">Entry System</span>
+          </td>
         </tr>
       </table>
-    </div>
 
-    <!-- QR Code -->
-    <div style="border:2px solid #F0EDE8;border-top:none;padding:30px;text-align:center;">
-      <p style="font-size:10px;letter-spacing:3px;color:rgba(240,237,232,0.6);margin:0 0 16px 0;text-transform:uppercase;">
-        YOUR ENTRY PASS
-      </p>
-      <div style="display:inline-block;border:2px solid rgba(240,237,232,0.3);padding:8px;background:#F0EDE8;">
-        <img src="${qrUrl}" alt="Entry QR Code" width="200" height="200" style="display:block;" />
+      <!-- Title / Header -->
+      <div style="margin-bottom:30px;">
+        <p class="text-accent" style="font-size:11px;font-weight:bold;letter-spacing:3px;color:#BF8430;margin:0 0 10px 0;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          EVENT REMINDER & PASS
+        </p>
+        <h1 class="text-primary" style="font-size:32px;line-height:1.2;font-weight:800;color:#0C0B09;margin:0;text-transform:uppercase;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          ${event.name}
+        </h1>
       </div>
+
+      <!-- Accent line -->
+      <div class="rule-accent" style="height:1px;background:linear-gradient(to right, transparent, rgba(191,132,48,0.3), transparent);margin-bottom:30px;"></div>
+
+      <!-- Custom message callout -->
+      ${customMessage ? `
+      <div class="message-callout" style="background-color:rgba(191,132,48,0.04);border:1px solid rgba(191,132,48,0.2);border-radius:2px;padding:20px;margin-bottom:30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.6;white-space:pre-wrap;color:#0C0B09;">
+        ${customMessage}
+      </div>` : ''}
+
+      <!-- Details Table -->
+      <div style="margin-bottom:35px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;width:120px;font-weight:600;">DATE</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${eventDate}</td>
+          </tr>
+          ${event.time ? `
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">TIME</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${event.time.slice(0, 5)}</td>
+          </tr>` : ''}
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">VENUE</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${event.venue}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Divider -->
+      <div class="rule-accent" style="height:1px;background:linear-gradient(to right, transparent, rgba(191,132,48,0.2), transparent);margin-bottom:35px;"></div>
+
+      <!-- QR Section -->
+      <div style="text-align:center;">
+        <p class="text-secondary" style="font-size:10px;letter-spacing:3px;color:#5C5850;margin:0 0 20px 0;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          YOUR ENTRY PASS
+        </p>
+        <div class="qr-wrapper" style="display:inline-block;border:1px solid rgba(12,11,9,0.08);padding:16px;background-color:#F4F1EC;border-radius:2px;">
+          <img src="${qrUrl}" alt="Entry QR Code" width="220" height="220" style="display:block;border:none;" />
+        </div>
+      </div>
+
     </div>
 
-    <!-- Footer -->
-    <div style="padding:20px 0;text-align:center;">
-      <p style="font-size:8px;letter-spacing:3px;color:rgba(240,237,232,0.3);margin:0;text-transform:uppercase;">
-        GATEKEEP_ENTRY_SYSTEM // EVENT_REMINDER
+    <!-- Micro Footer -->
+    <div style="padding:30px 0 10px 0;text-align:center;">
+      <p class="text-secondary" style="font-size:9px;letter-spacing:2.5px;color:#5C5850;margin:0;text-transform:uppercase;">
+        CRENELLE // EVENT_REMINDER
       </p>
     </div>
   </div>
@@ -275,6 +414,10 @@ export async function sendReminderEmailsDirect({
       console.error(`Exception sending reminder to ${recipient.email}:`, e)
       errors.push(`${recipient.email}: ${e.message || 'failed exception'}`)
     }
+
+    // Rate-limit throttling: Resend free tier allows 5 requests/second.
+    // Sleep 250ms between sequential emails to comfortably stay under this limit.
+    await new Promise((resolve) => setTimeout(resolve, 250))
   }
 
   return {

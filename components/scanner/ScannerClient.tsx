@@ -168,7 +168,7 @@ export default function ScannerClient({
       {/* Top Bar */}
       <header className="p-6 pt-10 shrink-0 border-b-2 border-ink">
         <h1 className="font-display text-4xl tracking-[0.3em] leading-none text-paper uppercase">
-          GATEKEEP
+          CRENELLE
         </h1>
         <p className="font-mono text-xs text-paper/40 uppercase mt-2 tracking-widest">
           {eventName} // {gate}

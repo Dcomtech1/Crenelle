@@ -259,7 +259,7 @@ export default function PublicRegistrationPage() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="font-mono text-[8px] uppercase tracking-[0.3em] text-foreground/30">
-            GATEKEEP_ENTRY_SYSTEM // SECURE_REGISTRATION
+            CRENELLE_ENTRY_SYSTEM // SECURE_REGISTRATION
           </p>
         </div>
       </div>

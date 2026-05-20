@@ -22,10 +22,10 @@ export function EventsHeader({
           isSearchExpanded && "hidden md:flex"
         )}
       >
-        <h2 className="font-display text-3xl uppercase text-foreground shrink-0">
-          EVENTS
+        <h2 className="font-display text-2xl font-semibold text-foreground shrink-0 tracking-tight">
+          Events
         </h2>
-        <div className="flex-1 border-t-2 border-foreground/20" />
+        <div className="flex-1 border-t border-border" />
       </div>
 
       <div
@@ -35,22 +35,19 @@ export function EventsHeader({
         )}
       >
         {isSearchExpanded ? (
-          <div className="relative w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="relative w-full">
             <input
               autoFocus
               type="text"
-              placeholder="SEARCH MANIFEST..."
+              placeholder="Search events..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onBlur={() => !search && setIsSearchExpanded(false)}
-              className="w-full bg-background border-2 border-foreground px-4 py-2 font-mono text-xs uppercase tracking-widest text-foreground focus:outline-none focus:border-signal"
+              className="w-full bg-muted border border-border px-4 py-2 font-sans text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-copper transition-colors"
             />
             <button
-              onClick={() => {
-                setIsSearchExpanded(false)
-                setSearch("")
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/40 hover:text-foreground"
+              onClick={() => { setIsSearchExpanded(false); setSearch("") }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="size-4" />
             </button>
@@ -58,10 +55,10 @@ export function EventsHeader({
         ) : (
           <button
             onClick={() => setIsSearchExpanded(true)}
-            className="p-2.5 border-2 border-transparent hover:border-foreground/20 hover:bg-foreground/5 transition-all ml-auto"
-            aria-label="Expand search"
+            className="p-2 border border-transparent hover:border-border hover:bg-foreground/4 text-muted-foreground hover:text-foreground transition-all ml-auto"
+            aria-label="Search events"
           >
-            <Search className="size-5" />
+            <Search className="size-4" />
           </button>
         )}
       </div>

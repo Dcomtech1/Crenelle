@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendInvitationEmail, sendReminderEmailsDirect } from '@/lib/email'
 
 /**
  * Public registration — called from the public registration form.
@@ -122,23 +123,16 @@ export async function acceptRegistration(registrationId: string, eventId: string
     .eq('id', eventId)
     .single()
 
-  // 6. Trigger invitation email via API route
+  if (!event) return { error: 'Event not found' }
+
+  // 6. Trigger invitation email directly
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000'
-    
-    await fetch(`${baseUrl}/api/send-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'invitation',
-        eventId,
-        recipientEmail: reg.email,
-        recipientName: reg.full_name,
-        invitationId: invitation.id,
-        event,
-      }),
+    await sendInvitationEmail({
+      eventId,
+      recipientEmail: reg.email,
+      recipientName: reg.full_name,
+      invitationId: invitation.id,
+      event,
     })
   } catch (e) {
     // Email failure shouldn't block the acceptance
@@ -182,74 +176,36 @@ export async function sendReminderEmails(eventId: string, customMessage: string)
 
   if (!event) return { error: 'Event not found' }
 
-  // Collect recipient emails
-  let recipients: { email: string; name: string; invitationId: string }[] = []
+  // Get all non-cancelled invitations with guest details (event-type agnostic)
+  const { data: invitations } = await supabase
+    .from('invitations')
+    .select('id, status, guest:guests(email, name)')
+    .eq('event_id', eventId)
+    .neq('status', 'cancelled')
 
-  if (event.event_type === 'open') {
-    // For open events, get accepted registrations and their matching invitations
-    const { data: regs } = await supabase
-      .from('registrations')
-      .select('email, full_name')
-      .eq('event_id', eventId)
-      .eq('status', 'accepted')
-
-    // Get the invitations with guest emails
-    const { data: invitations } = await supabase
-      .from('invitations')
-      .select('id, guest:guests(email, name)')
-      .eq('event_id', eventId)
-
-    const invByEmail = new Map<string, string>()
-    for (const inv of (invitations ?? []) as any[]) {
+  const recipients = ((invitations ?? []) as any[])
+    .map(inv => {
       const guest = Array.isArray(inv.guest) ? inv.guest[0] : inv.guest
-      if (guest?.email) invByEmail.set(guest.email.toLowerCase(), inv.id)
-    }
-
-    recipients = (regs ?? [])
-      .filter(r => r.email && invByEmail.has(r.email.toLowerCase()))
-      .map(r => ({
-        email: r.email,
-        name: r.full_name,
-        invitationId: invByEmail.get(r.email.toLowerCase())!,
-      }))
-  } else {
-    // For closed events, get all guests with invitations
-    const { data: invitations } = await supabase
-      .from('invitations')
-      .select('id, guest:guests(email, name)')
-      .eq('event_id', eventId)
-
-    recipients = ((invitations ?? []) as any[])
-      .map(inv => {
-        const guest = Array.isArray(inv.guest) ? inv.guest[0] : inv.guest
-        return { email: guest?.email, name: guest?.name, invitationId: inv.id }
-      })
-      .filter(r => r.email)
-  }
+      return { email: guest?.email, name: guest?.name, invitationId: inv.id }
+    })
+    .filter(r => r.email)
 
   if (recipients.length === 0) return { error: 'No confirmed guests with emails to send to' }
 
-  // Send via API route
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000'
-
+  // Send directly
   try {
-    const res = await fetch(`${baseUrl}/api/send-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'reminder',
-        eventId,
-        recipients,
-        event,
-        customMessage,
-      }),
+    const res = await sendReminderEmailsDirect({
+      eventId,
+      recipients,
+      event,
+      customMessage,
     })
-    const result = await res.json()
-    if (!res.ok) return { error: result.error || 'Failed to send reminders' }
-  } catch (e) {
-    return { error: 'Failed to send reminder emails' }
+
+    if (!res.success) {
+      return { error: `Failed to send reminders: ${res.errors?.join(', ') || 'Unknown error'}` }
+    }
+  } catch (e: any) {
+    return { error: e.message || 'Failed to send reminder emails' }
   }
 
   revalidatePath(`/events/${eventId}`)

@@ -9,10 +9,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-void text-paper border-2 border-paper hover:bg-paper hover:text-ink",
-        signal: "bg-void text-signal border-2 border-signal hover:bg-signal hover:text-void",
-        ghost: "bg-transparent border-2 border-ink text-paper hover:bg-ink hover:text-paper",
-        danger: "bg-denied text-paper border-2 border-denied hover:bg-void hover:text-denied",
+        primary: "bg-background text-foreground border-2 border-foreground hover:bg-foreground hover:text-background",
+        signal: "bg-transparent text-signal border-2 border-signal hover:bg-signal hover:text-void",
+        ghost: "bg-transparent border-2 border-transparent text-foreground",
+        danger: "bg-denied text-paper border-2 border-denied hover:bg-transparent hover:text-denied",
       },
       size: {
         default: "h-10 px-6 py-2 text-lg [&_svg]:size-5 gap-2",

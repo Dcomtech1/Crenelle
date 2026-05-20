@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { sendInvitationEmail } from '@/lib/email'
 
 export async function addGuest(eventId: string, formData: FormData) {
   const supabase = await createClient()
@@ -22,14 +23,41 @@ export async function addGuest(eventId: string, formData: FormData) {
   if (guestError) return { error: guestError.message }
 
   // Create invitation (the QR code record)
-  const { error: invError } = await supabase.from('invitations').insert({
-    event_id: eventId,
-    guest_id: guest.id,
-    party_size: partySize,
-    seat_info: seatInfo,
-  })
+  const { data: invitation, error: invError } = await supabase
+    .from('invitations')
+    .insert({
+      event_id: eventId,
+      guest_id: guest.id,
+      party_size: partySize,
+      seat_info: seatInfo,
+    })
+    .select()
+    .single()
 
-  if (invError) return { error: invError.message }
+  if (invError || !invitation) return { error: invError?.message || 'Failed to generate invitation' }
+
+  // Automatically send the invitation email if email is provided
+  if (email) {
+    const { data: event } = await supabase
+      .from('events')
+      .select('name, date, time, venue, description')
+      .eq('id', eventId)
+      .single()
+
+    if (event) {
+      try {
+        await sendInvitationEmail({
+          eventId,
+          recipientEmail: email,
+          recipientName: name,
+          invitationId: invitation.id,
+          event,
+        })
+      } catch (e) {
+        console.error('Failed to send automated invitation email:', e)
+      }
+    }
+  }
 
   revalidatePath(`/events/${eventId}/guests`)
   return { success: true }

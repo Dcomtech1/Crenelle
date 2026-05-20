@@ -105,7 +105,7 @@ export function EventBannerInput({ defaultValue }: EventBannerInputProps) {
             alt="Event banner preview"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-void/80 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+          <div className="absolute inset-0 bg-linear-to-t from-void/80 to-transparent flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
             <span className="font-mono text-[9px] text-white uppercase tracking-widest">
               BANNER_ATTACHED // PREVIEW_READY
             </span>

@@ -1,0 +1,4 @@
+## 2026-05-20 - Unauthenticated Access to Email Sending API
+**Vulnerability:** The `/api/send-email` API endpoint was completely unauthenticated. It accepted POST requests with email details and sent them via Resend using the server's API key. This is a critical SSRF/Open Mail Relay vulnerability that could be abused to send spam.
+**Learning:** Next.js API routes must explicitly check for authentication, even if they are only intended to be called by the frontend application or server actions. Server actions might use a client that implicitly checks cookies, but raw API routes do not.
+**Prevention:** Always verify that API endpoints performing sensitive actions (like sending emails or accessing user data) have explicit authentication checks (e.g., `await supabase.auth.getUser()`) before processing the request.

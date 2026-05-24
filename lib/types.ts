@@ -17,6 +17,7 @@ export interface Event {
   registration_slug: string | null
   max_registrations: number | null
   banner_url?: string | null
+  sender_profile_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -76,4 +77,14 @@ export interface EmailLog {
   email_type: 'invitation' | 'reminder'
   subject: string | null
   sent_at: string
+}
+
+export interface SenderProfile {
+  id: string
+  organizer_id: string
+  display_name: string   // shown in From: header
+  reply_to: string       // organizer's contact email for this brand
+  is_default: boolean
+  created_at: string
+  updated_at: string
 }

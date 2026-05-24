@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { LogOut, QrCode } from 'lucide-react'
+import { LogOut, QrCode, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { logout } from '@/app/actions/auth'
 import { ModeToggle } from '@/components/mode-toggle'
@@ -37,6 +37,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </span>
           <div className="w-px h-4 bg-border hidden sm:block" />
           <div className="flex items-center gap-1">
+            <Link
+              href="/settings/sender-profiles"
+              className="inline-flex items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70 hover:text-foreground border border-border hover:border-foreground/30 bg-transparent hover:bg-foreground/4 transition-all h-8 px-3"
+              aria-label="Settings"
+            >
+              <Settings className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Settings</span>
+            </Link>
             <ModeToggle />
             <form action={logout}>
               <button

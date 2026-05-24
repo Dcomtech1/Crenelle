@@ -34,12 +34,37 @@ export interface OrganizerDetails {
 async function fetchOrganizerForEvent(eventId: string): Promise<OrganizerDetails> {
   const admin = createAdminClient()
 
+  // Fetch the event together with its linked sender profile in one round-trip
   const { data: event } = await admin
     .from('events')
-    .select('organizer_id')
+    .select('organizer_id, sender_profile_id, sender_profiles(display_name, reply_to)')
     .eq('id', eventId)
     .single()
 
+  // ── Tier 1: event has an explicit sender profile linked ────────
+  const profile = event?.sender_profiles as
+    | { display_name: string; reply_to: string }
+    | null
+    | undefined
+  if (profile?.display_name && profile?.reply_to) {
+    return { name: profile.display_name, email: profile.reply_to }
+  }
+
+  // ── Tier 2: organizer's default sender profile ─────────────────
+  if (event?.organizer_id) {
+    const { data: defaultProfile } = await admin
+      .from('sender_profiles')
+      .select('display_name, reply_to')
+      .eq('organizer_id', event.organizer_id)
+      .eq('is_default', true)
+      .single()
+
+    if (defaultProfile?.display_name && defaultProfile?.reply_to) {
+      return { name: defaultProfile.display_name, email: defaultProfile.reply_to }
+    }
+  }
+
+  // ── Tier 3: auth user metadata (original fallback) ─────────────
   if (!event?.organizer_id) return { name: 'Crenelle', email: '' }
 
   try {

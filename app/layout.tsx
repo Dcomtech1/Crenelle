@@ -22,10 +22,28 @@ const syne = Syne({
 export const metadata: Metadata = {
   title: 'Crenelle — Event Access Management',
   description: 'Issue QR-coded entry passes, scan guests in real-time, and take full control of every door.',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
   openGraph: {
     title: 'Crenelle — Event Access Management',
     description: 'Issue QR-coded entry passes, scan guests in real-time, and take full control of every door.',
     type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Crenelle — Event Access Management',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Crenelle — Event Access Management',
+    description: 'Issue QR-coded entry passes, scan guests in real-time, and take full control of every door.',
+    images: ['/og-image.png'],
   },
 }
 

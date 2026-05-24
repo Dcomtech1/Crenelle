@@ -9,8 +9,51 @@ function getResend() {
   return _resend
 }
 
-// The "from" address — must be verified in Resend dashboard
-const FROM_EMAIL = process.env.EMAIL_FROM || 'Crenelle <onboarding@resend.dev>'
+// The sending address — domain must be verified in your Resend dashboard.
+// Set EMAIL_FROM_ADDRESS=noreply@yourdomain.com in .env.local.
+// Falls back to the legacy EMAIL_FROM value (address part only) if not set.
+const SENDING_ADDRESS = (
+  process.env.EMAIL_FROM_ADDRESS ||
+  process.env.EMAIL_FROM?.match(/<(.+)>/)?.[1] ||
+  'onboarding@resend.dev'
+)
+
+/** Organisation/organiser identity used to personalise the From header and Reply-To. */
+export interface OrganizerDetails {
+  /** Display name shown in the From field, e.g. "Acme Events" */
+  name: string
+  /** Organiser's own email address — used as Reply-To */
+  email: string
+}
+
+/**
+ * Looks up the organiser of an event via the Supabase auth admin client.
+ * Tries user_metadata.full_name → user_metadata.name → email prefix as display name.
+ * Returns a safe fallback if the user record cannot be retrieved.
+ */
+async function fetchOrganizerForEvent(eventId: string): Promise<OrganizerDetails> {
+  const admin = createAdminClient()
+
+  const { data: event } = await admin
+    .from('events')
+    .select('organizer_id')
+    .eq('id', eventId)
+    .single()
+
+  if (!event?.organizer_id) return { name: 'Crenelle', email: '' }
+
+  try {
+    const { data: { user } } = await admin.auth.admin.getUserById(event.organizer_id)
+    const name =
+      user?.user_metadata?.full_name ||
+      user?.user_metadata?.name ||
+      user?.email?.split('@')[0] ||
+      'Crenelle'
+    return { name, email: user?.email ?? '' }
+  } catch {
+    return { name: 'Crenelle', email: '' }
+  }
+}
 
 export interface EventDetails {
   name: string
@@ -53,6 +96,9 @@ export async function sendInvitationEmail({
   event,
 }: InvitationEmailOptions) {
   const supabase = createAdminClient()
+
+  // Resolve organiser identity for From header and Reply-To
+  const organizer = await fetchOrganizerForEvent(eventId)
 
   // Generate QR code URL using a hosted API (robust for emails)
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${invitationId}&color=0A0A0A&bgcolor=F0EDE8`;
@@ -210,7 +256,8 @@ export async function sendInvitationEmail({
 
   try {
     const { error: sendError } = await getResend().emails.send({
-      from: FROM_EMAIL,
+      from: `${organizer.name} <${SENDING_ADDRESS}>`,
+      ...(organizer.email ? { reply_to: organizer.email } : {}),
       to: recipientEmail,
       subject: `You're confirmed — ${event.name}`,
       html,
@@ -246,6 +293,9 @@ export async function sendReminderEmailsDirect({
   customMessage,
 }: ReminderEmailsOptions) {
   const supabase = createAdminClient()
+
+  // Resolve organiser identity once — shared across all recipients in this batch
+  const organizer = await fetchOrganizerForEvent(eventId)
 
   const eventDate = new Date(event.date).toLocaleDateString('en-GB', {
     weekday: 'long',
@@ -407,7 +457,8 @@ export async function sendReminderEmailsDirect({
 
     try {
       const { error: sendError } = await getResend().emails.send({
-        from: FROM_EMAIL,
+        from: `${organizer.name} <${SENDING_ADDRESS}>`,
+        ...(organizer.email ? { reply_to: organizer.email } : {}),
         to: recipient.email,
         subject: `Reminder — ${event.name}`,
         html,

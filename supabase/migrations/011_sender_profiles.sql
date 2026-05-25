@@ -1,5 +1,5 @@
 -- ============================================================
--- GateKeep — Sender Profiles
+-- Crenelle — Sender Profiles
 -- Allows organizers to manage multiple branded email identities.
 -- Each profile has a display name (From: header) and reply-to email.
 -- An event can be linked to a specific profile; if none is set,

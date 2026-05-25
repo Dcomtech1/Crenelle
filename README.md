@@ -2,7 +2,7 @@
 
 > The layer between *who is authorised to be here* and *proof they were here.*
 
-Crenelle (codebase: `gatekeeper`) is a QR-based access control and guest management platform. It lets event organisers and institutions issue verifiable digital credentials to members or guests, deploy scanner links to checkpoints, and maintain a real-time audit log of everyone who enters — with zero hardware required.
+Crenelle is a QR-based access control and guest management platform. It lets event organisers and institutions issue verifiable digital credentials to members or guests, deploy scanner links to checkpoints, and maintain a real-time audit log of everyone who enters — with zero hardware required.
 
 **Starting point:** Events (corporate, private, social).  
 **Bigger picture:** The access credential layer for African organisations — churches, universities, corporate campuses, associations, estates.
@@ -133,7 +133,7 @@ Open [http://localhost:3000](http://localhost:3000)
 ## Project Structure
 
 ```
-gatekeeper/
+crenelle/
 ├── app/
 │   ├── layout.tsx                 # Root layout — ThemeProvider, Sonner
 │   ├── page.tsx                   # Landing page

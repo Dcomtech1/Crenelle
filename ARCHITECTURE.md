@@ -1,6 +1,6 @@
-# GateKeeper — Systems Architecture
+# Crenelle — Systems Architecture
 
-> **Codebase:** `gatekeeper` · **Stack:** Next.js 16 + Supabase + Resend  
+> **Codebase:** `crenelle` · **Stack:** Next.js 16 + Supabase + Resend  
 > **Last updated:** May 2026 · **Author:** Systems Architect
 
 ---
@@ -29,7 +29,7 @@
 
 ## 1. System Overview
 
-**GateKeeper** (branded as **Crenelle** at the platform level) is a B2B event management and access-control platform. It enables event organisers to:
+**Crenelle** is a B2B event management and access-control platform. It enables event organisers to:
 
 - Create and manage events (closed invite-only or open public registration)
 - Build guest lists and generate unique per-guest QR code invitations
@@ -541,7 +541,7 @@ A **PostgreSQL trigger** (`004_enforce_entry_limit_trigger.sql`) blocks concurre
 
 | Item | Implementation |
 |------|---------------|
-| ✅ Rate limiting on `/api/register` | IP-based (10/15min) + email-based (3/hr) sliding-window via [`lib/rate-limit.ts`](file:///c:/Users/olana/OneDrive/Documents/gatekeeper/lib/rate-limit.ts). Applied in `submitRegistration` server action. |
+| ✅ Rate limiting on `/api/register` | IP-based (10/15min) + email-based (3/hr) sliding-window via [`lib/rate-limit.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/lib/rate-limit.ts). Applied in `submitRegistration` server action. |
 | ✅ Email unsubscribe / opt-out | `email_unsubscribes` table (migration 012), one-click `/api/unsubscribe?token=<hex>` route, token injected into every email footer. Pre-send check in `sendInvitationEmail` and `sendReminderEmailsDirect`. |
 
 ---
@@ -929,7 +929,7 @@ Rationale: After creating an event, the most common workflow is: set up → add 
 
 ### The Real Problem Is Not "Event Management"
 
-Strip GateKeeper down to first principles and the core loop is this:
+Strip Crenelle down to first principles and the core loop is this:
 
 ```
 1. Define a list of people who are authorised to be somewhere
@@ -978,7 +978,7 @@ None of these work in the African context because:
 4. **NGN pricing is inaccessible** at $20–$50/seat/month Western SaaS pricing
 5. **WhatsApp is the operating system** — credential delivery via WhatsApp is more reliable than email for many segments
 
-GateKeeper, as currently built, already solves for points 1, 2, and 5. The QR-on-phone + browser scanner is the right form factor for this market.
+Crenelle, as currently built, already solves for points 1, 2, and 5. The QR-on-phone + browser scanner is the right form factor for this market.
 
 ---
 
@@ -1123,7 +1123,7 @@ The good news: **the architecture is already 70% of the way there.**
 ### The Reframed Pitch
 
 **Today:**
-> "GateKeeper is event management software with QR check-in."
+> "Crenelle is event management software with QR check-in."
 
 **The bigger truth:**
 > "Crenelle is the access credential infrastructure for African organisations — the layer between 'who is authorised to be here' and 'proof they were here.' We started with events because every organisation runs them. We're building toward owning physical presence as a verifiable, digital-first record for every community, institution, and gathering on the continent."

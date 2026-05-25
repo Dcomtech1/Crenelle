@@ -1,9 +1,11 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendInvitationEmail, sendReminderEmailsDirect } from '@/lib/email'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 /**
  * Public registration — called from the public registration form.
@@ -11,6 +13,29 @@ import { sendInvitationEmail, sendReminderEmailsDirect } from '@/lib/email'
  */
 export async function submitRegistration(eventId: string, formData: FormData) {
   const supabase = createAdminClient()
+
+  // ── Rate limiting (CAN-SPAM / anti-spam) ──────────────────────
+  // Derive a best-effort IP from forwarded headers.
+  const headerStore = await headers()
+  const ip =
+    headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    headerStore.get('x-real-ip') ??
+    'unknown'
+
+  const email = (formData.get('email') as string)?.trim().toLowerCase() ?? ''
+
+  // 10 attempts per IP per 15 minutes
+  const ipLimit = checkRateLimit({ key: `reg_ip:${ip}`, limit: 10, windowMs: 15 * 60 * 1000 })
+  if (!ipLimit.allowed) {
+    return { error: 'Too many registration attempts from your network. Please try again later.' }
+  }
+
+  // 3 attempts per email per hour (catches email enumeration)
+  const emailLimit = checkRateLimit({ key: `reg_email:${email}`, limit: 3, windowMs: 60 * 60 * 1000 })
+  if (!emailLimit.allowed) {
+    return { error: 'Too many registrations for this email address. Please wait before trying again.' }
+  }
+
 
   // 1. Verify the event exists, is open, and is published
   const { data: event, error: eventError } = await supabase
@@ -37,8 +62,19 @@ export async function submitRegistration(eventId: string, formData: FormData) {
     }
   }
 
-  // 3. Insert registration
-  const email = (formData.get('email') as string)?.trim().toLowerCase()
+  // 3. Check unsubscribe list — don't accept registrations from opted-out emails
+  const { data: unsub } = await supabase
+    .from('email_unsubscribes')
+    .select('id')
+    .ilike('email', email)
+    .maybeSingle()
+
+  if (unsub) {
+    // Silent success — don't leak which emails are on the list
+    return { success: true }
+  }
+
+  // 4. Insert registration
   const fullName = (formData.get('full_name') as string)?.trim()
   const phone = (formData.get('phone') as string)?.trim() || null
 

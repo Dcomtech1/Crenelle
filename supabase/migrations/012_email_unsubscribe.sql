@@ -1,5 +1,5 @@
 -- ============================================================
--- GateKeeper — Email Unsubscribe / Opt-out (CAN-SPAM / GDPR)
+-- Crenelle — Email Unsubscribe / Opt-out (CAN-SPAM / GDPR)
 -- Migration: 012_email_unsubscribe.sql
 -- ============================================================
 

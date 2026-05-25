@@ -1,5 +1,5 @@
 -- ============================================================
--- GateKeep — Initial Database Schema
+-- Crenelle — Initial Database Schema
 -- Run this in: Supabase Dashboard → SQL Editor → New Query
 -- ============================================================
 

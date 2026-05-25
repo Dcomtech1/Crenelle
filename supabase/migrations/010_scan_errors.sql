@@ -1,5 +1,5 @@
 -- ============================================================
--- GateKeep — Scan Error Tracking
+-- Crenelle — Scan Error Tracking
 -- Run this in: Supabase Dashboard → SQL Editor → New Query
 -- ============================================================
 

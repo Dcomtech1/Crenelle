@@ -97,7 +97,7 @@ async function fetchOrganizerForEvent(eventId: string): Promise<OrganizerDetails
  */
 async function getUnsubscribeUrl(email: string): Promise<string> {
   const admin = createAdminClient()
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://crenelle.co'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://crenelle.org'
 
   // Try to fetch an existing token first
   const { data: existing } = await admin
@@ -609,5 +609,147 @@ export async function sendReminderEmailsDirect({
     success: errors.length === 0,
     sent,
     errors: errors.length > 0 ? errors : undefined,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Co-host invite notification
+// ─────────────────────────────────────────────────────────────────────────────
+
+const roleDescriptions: Record<string, string> = {
+  viewer:          'view-only access (guests, registrations, and entry logs)',
+  scanner_manager: 'Scanner Manager access (view everything + manage usher scanner links)',
+  co_organiser:    'Co-Organiser access (manage guests, send invitations, and manage scanner links)',
+}
+
+/**
+ * Sends a notification email to a newly invited co-host.
+ * Called immediately after the event_members row is inserted.
+ */
+export async function sendCoHostInviteEmail({
+  inviteeEmail,
+  inviteeName,
+  inviterName,
+  inviterEmail,
+  eventName,
+  eventDate,
+  eventId,
+  role,
+}: {
+  inviteeEmail: string
+  inviteeName: string
+  inviterName: string
+  inviterEmail: string
+  eventName: string
+  eventDate: string
+  eventId: string
+  role: string
+}): Promise<void> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://crenelle.org'
+  const eventUrl = `${appUrl}/events/${eventId}`
+  const roleDesc = roleDescriptions[role] ?? role
+
+  const formattedDate = new Date(eventDate).toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You've been invited to co-host ${eventName}</title>
+</head>
+<body style="margin:0;padding:0;background:#F4F1EC;font-family:'Courier New',Courier,monospace;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F1EC;padding:48px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid rgba(12,11,9,0.12);max-width:600px;width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding:32px 40px 24px;border-bottom:1px solid rgba(12,11,9,0.1);">
+              <p style="margin:0;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#BF8430;">
+                CRENELLE // TEAM_ACCESS
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 32px;">
+              <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:28px;font-weight:600;color:#0C0B09;line-height:1.1;letter-spacing:-0.5px;">
+                You've been invited to co-host
+              </h1>
+              <h2 style="margin:0 0 32px;font-family:Georgia,serif;font-size:22px;font-weight:400;color:#BF8430;line-height:1.2;">
+                ${eventName}
+              </h2>
+
+              <p style="margin:0 0 24px;font-size:13px;color:#5C5850;line-height:1.7;">
+                <strong style="color:#0C0B09;">${inviterName}</strong> has invited you to collaborate on this event.
+                You have been granted <strong style="color:#0C0B09;">${roleDesc}</strong>.
+              </p>
+
+              <!-- Event details -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F1EC;border-left:3px solid #BF8430;margin:0 0 32px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0 0 4px;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#BF8430;">EVENT</p>
+                    <p style="margin:0 0 12px;font-size:16px;font-family:Georgia,serif;font-weight:600;color:#0C0B09;">${eventName}</p>
+                    <p style="margin:0;font-size:12px;color:#5C5850;">${formattedDate}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+                <tr>
+                  <td style="background:#0C0B09;">
+                    <a href="${eventUrl}"
+                       style="display:inline-block;padding:14px 32px;font-size:11px;font-family:'Courier New',Courier,monospace;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#F4F1EC;text-decoration:none;">
+                      VIEW EVENT →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;font-size:12px;color:#5C5850;line-height:1.6;">
+                If you did not expect this invitation, you can safely ignore this email.
+                Contact <a href="mailto:${inviterEmail}" style="color:#BF8430;">${inviterEmail}</a> if you have questions.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 40px;border-top:1px solid rgba(12,11,9,0.08);">
+              <p style="margin:0;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#BF8430;text-align:center;">
+                CRENELLE // EVENT MANAGEMENT
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  try {
+    const { error } = await getResend().emails.send({
+      from: `Crenelle <${SENDING_ADDRESS}>`,
+      replyTo: inviterEmail,
+      to: inviteeEmail,
+      subject: `You've been invited to co-host "${eventName}"`,
+      html,
+    })
+    if (error) {
+      console.error('[email] Failed to send co-host invite email:', JSON.stringify(error))
+    } else {
+      console.log(`[email] Co-host invite sent to ${inviteeEmail} for event ${eventId}`)
+    }
+  } catch (e) {
+    console.error('[email] Exception sending co-host invite email:', e)
   }
 }

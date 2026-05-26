@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendCoHostInviteEmail } from '@/lib/email'
 import type { EventMember, MemberRole } from '@/lib/types'
 
 // ── Auth helper ────────────────────────────────────────────────
@@ -149,6 +150,35 @@ export async function inviteTeamMember(
       return { error: 'This person is already a co-host for this event' }
     }
     return { error: insertError.message }
+  }
+
+  // Fetch event name + date to personalise the email
+  const { data: eventRow } = await supabase
+    .from('events')
+    .select('name, date')
+    .eq('id', eventId)
+    .single()
+
+  // Resolve inviter display name
+  const inviterName = (
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.email?.split('@')[0] ||
+    'Your co-organiser'
+  )
+
+  // Send notification email — fire-and-forget (errors logged, not surfaced)
+  if (eventRow) {
+    void sendCoHostInviteEmail({
+      inviteeEmail: invitee.email!,
+      inviteeName: invitee.user_metadata?.full_name ?? invitee.user_metadata?.name ?? invitee.email?.split('@')[0] ?? 'there',
+      inviterName,
+      inviterEmail: user.email ?? '',
+      eventName: eventRow.name,
+      eventDate: eventRow.date,
+      eventId,
+      role,
+    })
   }
 
   revalidatePath(`/events/${eventId}/team`)

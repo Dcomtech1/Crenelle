@@ -61,8 +61,8 @@ function makeAccess(role: TeamRole | null): EventAccess {
     isOwner:             role === 'owner',
     canEdit:             role === 'owner',
     canManageTeam:       role === 'owner',
-    canManageGuests:     role === 'owner',
-    canManageScanners:   role === 'owner' || role === 'scanner_manager',
-    canSendEmails:       role === 'owner',
+    canManageGuests:     role === 'owner' || role === 'co_organiser',
+    canManageScanners:   role === 'owner' || role === 'scanner_manager' || role === 'co_organiser',
+    canSendEmails:       role === 'owner' || role === 'co_organiser',
   }
 }

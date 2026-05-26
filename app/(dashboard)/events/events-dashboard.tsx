@@ -24,6 +24,7 @@ interface EventsDashboardClientProps {
 const roleLabels: Record<string, string> = {
   viewer: 'Viewer',
   scanner_manager: 'Scanner Manager',
+  co_organiser: 'Co-Organiser',
 }
 
 export function EventsDashboardClient({

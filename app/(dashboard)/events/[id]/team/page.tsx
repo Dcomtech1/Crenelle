@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { useParams, notFound } from 'next/navigation'
-import { UserPlus, Trash2, Users, Shield, Eye } from 'lucide-react'
+import { UserPlus, Trash2, Users, Shield, Eye, Star } from 'lucide-react'
 import { getTeamMembers, inviteTeamMember, removeTeamMember, updateTeamMemberRole } from '@/app/actions/team'
 import { fieldCls, labelCls } from '@/lib/form-styles'
 import { Button } from '@/components/ui/button'
@@ -22,9 +22,15 @@ const roleConfig: Record<MemberRole, { label: string; description: string; icon:
   },
   scanner_manager: {
     label: 'Scanner Manager',
-    description: 'All viewer permissions + can create, activate, and delete scanner links.',
+    description: 'All viewer permissions + can create, activate, and delete scanner links for ushers.',
     icon: <Shield className="h-4 w-4" />,
     cls: 'bg-signal/10 text-signal border-signal/30',
+  },
+  co_organiser: {
+    label: 'Co-Organiser',
+    description: 'Full collaboration — can manage guests, send invitations, and manage scanner links. Cannot edit or delete the event.',
+    icon: <Star className="h-4 w-4" />,
+    cls: 'bg-copper/10 text-copper border-copper/30',
   },
 }
 

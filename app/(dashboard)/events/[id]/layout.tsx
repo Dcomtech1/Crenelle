@@ -14,6 +14,7 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
 const roleLabels: Record<string, string> = {
   viewer:          'CO-HOST // VIEWER',
   scanner_manager: 'CO-HOST // SCANNER MGR',
+  co_organiser:    'CO-HOST // CO-ORGANISER',
 }
 
 export default async function EventLayout({

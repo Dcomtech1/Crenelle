@@ -90,8 +90,8 @@ export interface SenderProfile {
   updated_at: string
 }
 
-export type TeamRole = 'owner' | 'viewer' | 'scanner_manager'
-export type MemberRole = 'viewer' | 'scanner_manager'
+export type TeamRole = 'owner' | 'viewer' | 'scanner_manager' | 'co_organiser'
+export type MemberRole = 'viewer' | 'scanner_manager' | 'co_organiser'
 
 export interface EventMember {
   id: string

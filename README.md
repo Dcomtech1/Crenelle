@@ -19,6 +19,11 @@ Crenelle is a QR-based access control and guest management platform. It lets eve
 - Create **scanner links** per checkpoint/entrance — shareable over WhatsApp, no login required for ushers
 - Manage **sender profiles** (branded From: name and reply-to per event or organisation)
 - Monitor **real-time attendance** and registration stats from the dashboard
+- **Invite co-hosts** with granular permissions — Viewer, Scanner Manager, or Co-Organiser — each receiving an automated email notification
+- Navigate deep pages with a beautiful **dynamic breadcrumb trail** (`Events / [Event Name] / [Section]`) for clear spatial context
+- View **status-aware event metrics** (switches automatically between `Invited` for drafts/published events and `Checked In` for live events) across the dashboard and co-hosted lists
+- Manage organisation settings using a dedicated **responsive settings layout** featuring a left sidebar (desktop) and horizontal navigation (mobile)
+- Access the platform on the go with a **responsive mobile bottom navigation bar** with a prominent overlapping central FAB for quick event creation
 
 ### For Ushers / Checkpoint Staff
 - Open a scanner link on any smartphone browser — no app download, no login
@@ -107,18 +112,22 @@ In your **Supabase Dashboard → SQL Editor**, run each migration file in order:
 
 ```
 supabase/migrations/
-  001_initial_schema.sql          ← Core tables + RLS
-  002_allow_multiple_entries.sql  ← Party-size entry support
-  003_event_status_lifecycle.sql  ← draft / published / live / ended
+  001_initial_schema.sql               ← Core tables + RLS
+  002_allow_multiple_entries.sql       ← Party-size entry support
+  003_event_status_lifecycle.sql       ← draft / published / live / ended
   004_enforce_entry_limit_trigger.sql  ← Race-condition DB trigger
-  005_open_events.sql             ← Public registration + registrations table
-  006_email_logs.sql              ← Email audit log
-  007_add_event_banner.sql        ← Event banner images
+  005_open_events.sql                  ← Public registration + registrations table
+  006_email_logs.sql                   ← Email audit log
+  007_add_event_banner.sql             ← Event banner images
   008_cleanup_orphaned_banners.sql
   009_drop_orphaned_banners_trigger.sql
-  010_scan_errors.sql             ← Scan error audit table
-  011_sender_profiles.sql         ← Multi-brand email sender profiles
-  012_email_unsubscribe.sql       ← CAN-SPAM / GDPR unsubscribe tokens
+  010_scan_errors.sql                  ← Scan error audit table
+  011_sender_profiles.sql              ← Multi-brand email sender profiles
+  012_email_unsubscribe.sql            ← CAN-SPAM / GDPR unsubscribe tokens
+  013_registration_cap_and_waitlist.sql ← DB-enforced cap + waitlist routing
+  014_fix_unsubscribe_default.sql      ← Fix unsubscribed_at default (bug fix)
+  015_team_access.sql                  ← event_members table + co-host RLS
+  016_add_co_organiser_role.sql        ← co_organiser role tier
 ```
 
 ### 4. Run locally
@@ -145,15 +154,16 @@ crenelle/
 │   │
 │   ├── (dashboard)/               # Organiser portal (auth-guarded)
 │   │   ├── events/
-│   │   │   ├── page.tsx           # Events list + stats
+│   │   │   ├── page.tsx           # Events list + stats + co-hosting section
 │   │   │   ├── new/               # Create event form
 │   │   │   └── [id]/              # Event detail hub
 │   │   │       ├── page.tsx       # Overview + edit + reminder email
-│   │   │       ├── guests/        # Guest list + invite flow
+│   │   │       ├── guests/        # Guest list + invite flow (role-gated)
 │   │   │       ├── registrations/ # Accept / reject queue (open events)
 │   │   │       ├── cards/         # QR invitation cards / passes
-│   │   │       ├── scanner-links/ # Usher checkpoint management
-│   │   │       └── dashboard/     # Live attendance analytics
+│   │   │       ├── scanner-links/ # Usher checkpoint management (role-gated)
+│   │   │       ├── dashboard/     # Live attendance analytics
+│   │   │       └── team/          # Co-host management (owner only)
 │   │   └── settings/
 │   │       └── sender-profiles/   # Email sender brand config
 │   │
@@ -169,7 +179,8 @@ crenelle/
 │   │   ├── guests.ts
 │   │   ├── registrations.ts
 │   │   ├── scanner-links.ts
-│   │   └── sender-profiles.ts
+│   │   ├── sender-profiles.ts
+│   │   └── team.ts                # Co-host invite / remove / role update
 │   │
 │   └── api/
 │       ├── scan/route.ts          # POST — validate QR + record entry
@@ -195,6 +206,7 @@ crenelle/
 │   ├── email.ts                   # Email templates + Resend dispatch
 │   ├── images.ts                  # Banner URL helpers
 │   ├── rate-limit.ts              # In-process sliding-window rate limiter
+│   ├── team-access.ts             # getEventAccess() — role resolution helper
 │   ├── types.ts                   # TypeScript interfaces
 │   └── validations/               # Zod schemas
 │
@@ -214,7 +226,8 @@ events ──────────────── guests ─────�
    ├── scanner_links        └── (guest_id FK)
    ├── registrations
    ├── email_logs
-   └── sender_profiles
+   ├── sender_profiles
+   └── event_members          (co-host team access — role per member)
 
 email_unsubscribes        (opt-out list — admin-only access)
 scan_errors               (error audit — admin-only access)
@@ -233,6 +246,7 @@ scan_errors               (error audit — admin-only access)
 | `/api/scan` | Admin client — explicit security logic; no RLS dependency |
 | `/api/send-email` | Requires valid session; RLS-scoped event fetch |
 | `/api/unsubscribe` | Token-only — 48-char hex, no session required (CAN-SPAM) |
+| Co-host event access | RLS policies on `event_members` — members can only read events they are invited to; mutations gated by role |
 
 **Race condition protection:** A PostgreSQL trigger (`004_enforce_entry_limit_trigger.sql`) blocks concurrent scans that would exceed `party_size`. Works at the DB level — the API catches the error and returns a clean 409.
 
@@ -285,16 +299,23 @@ Key sections:
 **Completed**
 - [x] Rate limiting on public registration (IP + email-based)
 - [x] Email unsubscribe / opt-out (CAN-SPAM / GDPR)
+- [x] Registration cap enforced at DB level (trigger)
+- [x] Waitlist for over-capacity open events
+- [x] Bulk email guest import
+- [x] Multi-entrance live analytics (per-gate breakdown)
+- [x] Manual name search on scanner page
+- [x] Audio feedback on scan (admit / deny tones)
+- [x] Live usher counter (gate total + event total)
+- [x] **Team access / co-host collaboration** — Viewer, Scanner Manager, Co-Organiser roles with RLS enforcement and invite email
 
 **Next**
 - [ ] Active tab indicator in event sub-navigation
-- [ ] Waitlist for over-capacity open events
-- [ ] Bulk CSV guest import
 - [ ] Paystack payment integration (ticketed events)
 - [ ] PWA offline scanner mode
 - [ ] AI guest list parsing (paste → structured rows)
 - [ ] Recurring event series (weekly programmes)
 - [ ] WhatsApp credential delivery
+- [ ] Custom email domain per organiser (Resend custom domain)
 
 ---
 

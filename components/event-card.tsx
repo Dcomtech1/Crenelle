@@ -11,6 +11,7 @@ interface EventCardProps {
   eventType?: "closed" | "open"
   onStatusClick?: (e: React.MouseEvent) => void
   className?: string
+  guestLabel?: string
 }
 
 export function EventCard({
@@ -23,6 +24,7 @@ export function EventCard({
   eventType = 'closed',
   onStatusClick,
   className,
+  guestLabel,
 }: EventCardProps) {
   const percentage = Math.min((guestCount / capacity) * 100, 100)
 
@@ -104,7 +106,9 @@ export function EventCard({
         {/* Bottom: metrics */}
         <div className="px-5 py-4 flex items-center gap-8">
           <div>
-            <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-muted-foreground mb-1">Guests</p>
+            <p className="font-sans text-[9px] uppercase tracking-[0.18em] text-muted-foreground mb-1">
+              {guestLabel || "Guests"}
+            </p>
             <div className="flex items-baseline gap-1">
               <span className="font-display text-2xl font-semibold text-foreground leading-none">
                 {guestCount.toString().padStart(3, '0')}

@@ -68,6 +68,7 @@ export async function submitRegistration(eventId: string, formData: FormData) {
     .from('email_unsubscribes')
     .select('id')
     .ilike('email', email)
+    .not('unsubscribed_at', 'is', null)
     .maybeSingle()
 
   if (unsub) {
@@ -319,10 +320,14 @@ export async function sendReminderEmails(eventId: string, customMessage: string)
 
     revalidatePath(`/events/${eventId}`)
 
-    // Surface partial failures as a warning rather than a hard error.
-    // res.success is false if ANY recipient failed, but some may have succeeded.
-    if (res.sent === 0) {
-      return { error: `Failed to send reminders: ${res.errors?.join(', ') || 'Unknown error'}` }
+    // All recipients were on the unsubscribe list — inform without erroring
+    if (res.sent === 0 && (res as any).skipped > 0 && !res.errors?.length) {
+      return { error: 'No emails sent — all guests have unsubscribed from emails.' }
+    }
+
+    // All sends failed
+    if (res.sent === 0 && res.errors?.length) {
+      return { error: `Failed to send reminders: ${res.errors.join(', ')}` }
     }
 
     return {

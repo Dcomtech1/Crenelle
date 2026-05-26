@@ -89,3 +89,19 @@ export interface SenderProfile {
   created_at: string
   updated_at: string
 }
+
+export type TeamRole = 'owner' | 'viewer' | 'scanner_manager' | 'co_organiser'
+export type MemberRole = 'viewer' | 'scanner_manager' | 'co_organiser'
+
+export interface EventMember {
+  id: string
+  event_id: string
+  organizer_id: string
+  member_id: string
+  role: MemberRole
+  invited_by: string
+  created_at: string
+  // Joined via admin client — populated by getTeamMembers()
+  member_email?: string
+  member_name?: string
+}

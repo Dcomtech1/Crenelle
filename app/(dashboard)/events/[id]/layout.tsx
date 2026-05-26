@@ -4,11 +4,11 @@ import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 
 const baseTabs = [
-  { label: 'Overview',      href: '' },
-  { label: 'Guests',        href: '/guests' },
-  { label: 'Entry Cards',   href: '/cards' },
-  { label: 'Scanner Links', href: '/scanner-links' },
-  { label: 'Live Dashboard',href: '/dashboard' },
+  { label: 'Overview',       href: '' },
+  { label: 'Guests',         href: '/guests' },
+  { label: 'Live Dashboard', href: '/dashboard' },
+  { label: 'Scanner Links',  href: '/scanner-links' },
+  { label: 'Passes',         href: '/cards' },
 ]
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
@@ -40,7 +40,8 @@ export default async function EventLayout({
 
   const tabs = [...baseTabs]
   if (event.event_type === 'open') {
-    tabs.splice(1, 0, { label: 'Registrations', href: '/registrations' })
+    // Insert Registrations after Guests (index 2)
+    tabs.splice(2, 0, { label: 'Registrations', href: '/registrations' })
   }
 
   return (

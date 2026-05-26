@@ -27,6 +27,7 @@ export default function PublicRegistrationPage() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [waitlisted, setWaitlisted] = useState(false)
   const isSubmitting = useRef(false)
 
   useEffect(() => {
@@ -60,6 +61,7 @@ export default function PublicRegistrationPage() {
       setSubmitting(false)
       isSubmitting.current = false
     } else {
+      setWaitlisted(!!(result as any)?.waitlisted)
       setSubmitted(true)
     }
   }
@@ -98,19 +100,36 @@ export default function PublicRegistrationPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="max-w-md w-full text-center">
-          <div className="border-2 border-admitted/30 bg-admitted/5 p-8">
-            <CheckCircle2 className="h-16 w-16 text-admitted mx-auto mb-6" />
-            <h1 className="font-display text-4xl uppercase text-foreground mb-3">REGISTRATION RECEIVED</h1>
-            <p className="font-mono text-sm text-foreground/70 leading-relaxed mb-6">
-              Your registration for <span className="text-foreground font-bold">{event.name}</span> has been submitted successfully.
-            </p>
-            <div className="border-t border-foreground/10 pt-6">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/50 leading-relaxed">
-                The organizer will review your registration.
-                If accepted, you'll receive an email with your entry pass QR code.
+          {waitlisted ? (
+            <div className="border-2 border-signal/30 bg-signal/5 p-8">
+              <Clock className="h-16 w-16 text-signal mx-auto mb-6" />
+              <h1 className="font-display text-4xl uppercase text-foreground mb-3">ADDED TO WAITLIST</h1>
+              <p className="font-mono text-sm text-foreground/70 leading-relaxed mb-6">
+                <span className="text-foreground font-bold">{event.name}</span> is currently full.
+                You've been added to the waitlist and will be notified if a spot opens up.
               </p>
+              <div className="border-t border-foreground/10 pt-6">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/50 leading-relaxed">
+                  The organizer manages the waitlist. If a place becomes available,
+                  you'll receive an email with your entry pass QR code.
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="border-2 border-admitted/30 bg-admitted/5 p-8">
+              <CheckCircle2 className="h-16 w-16 text-admitted mx-auto mb-6" />
+              <h1 className="font-display text-4xl uppercase text-foreground mb-3">REGISTRATION RECEIVED</h1>
+              <p className="font-mono text-sm text-foreground/70 leading-relaxed mb-6">
+                Your registration for <span className="text-foreground font-bold">{event.name}</span> has been submitted successfully.
+              </p>
+              <div className="border-t border-foreground/10 pt-6">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/50 leading-relaxed">
+                  The organizer will review your registration.
+                  If accepted, you'll receive an email with your entry pass QR code.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -182,11 +201,38 @@ export default function PublicRegistrationPage() {
         <div className="border-2 border-foreground/20 border-t-0 p-6">
           {isFull ? (
             <div className="text-center py-8">
-              <XCircle className="h-10 w-10 text-denied mx-auto mb-4" />
-              <h2 className="font-display text-2xl uppercase text-foreground mb-2">REGISTRATION FULL</h2>
-              <p className="font-mono text-xs text-foreground/60 uppercase tracking-widest">
-                All available spots have been taken.
+              <Clock className="h-10 w-10 text-signal mx-auto mb-4" />
+              <h2 className="font-display text-2xl uppercase text-foreground mb-2">EVENT IS FULL</h2>
+              <p className="font-mono text-xs text-foreground/60 uppercase tracking-widest mb-6">
+                All spots are taken — but you can join the waitlist.
               </p>
+
+              {error && (
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="border-2 border-denied bg-denied/10 p-4 font-mono text-sm text-denied uppercase tracking-wide mb-4 text-left"
+                >
+                  ⚠ {error}
+                </div>
+              )}
+
+              <form action={handleSubmit} className="flex flex-col gap-5 text-left">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="wl-name" className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/80">Full Name *</label>
+                  <input id="wl-name" name="full_name" required placeholder="e.g. Ngozi Okafor"
+                    className="w-full bg-background border-2 border-foreground/40 text-foreground font-mono text-sm px-4 py-3 placeholder:text-foreground/40 focus:outline-none focus:border-signal transition-colors" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="wl-email" className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/80">Email Address *</label>
+                  <input id="wl-email" name="email" type="email" required placeholder="you@example.com"
+                    className="w-full bg-background border-2 border-foreground/40 text-foreground font-mono text-sm px-4 py-3 placeholder:text-foreground/40 focus:outline-none focus:border-signal transition-colors" />
+                </div>
+                <button type="submit" disabled={submitting}
+                  className="w-full h-14 bg-signal text-void font-display text-2xl uppercase tracking-wider hover:bg-signal/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {submitting ? 'JOINING...' : 'JOIN WAITLIST →'}
+                </button>
+              </form>
             </div>
           ) : (
             <>

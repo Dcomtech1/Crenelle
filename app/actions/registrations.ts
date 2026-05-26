@@ -49,16 +49,17 @@ export async function submitRegistration(eventId: string, formData: FormData) {
   if (event.status === 'draft') return { error: 'Registration is not yet open for this event' }
   if (event.status === 'ended') return { error: 'This event has ended' }
 
-  // 2. Check registration cap
+  // 2. Check registration cap — route to waitlist if full
+  let routeToWaitlist = false
   if (event.max_registrations) {
     const { count } = await supabase
       .from('registrations')
       .select('*', { count: 'exact', head: true })
       .eq('event_id', eventId)
-      .neq('status', 'rejected')
+      .not('status', 'in', '(rejected,waitlist)')
 
     if ((count ?? 0) >= event.max_registrations) {
-      return { error: 'Registration is full — no more spots available' }
+      routeToWaitlist = true
     }
   }
 
@@ -74,7 +75,7 @@ export async function submitRegistration(eventId: string, formData: FormData) {
     return { success: true }
   }
 
-  // 4. Insert registration
+  // 4. Insert registration (pending or waitlist)
   const fullName = (formData.get('full_name') as string)?.trim()
   const phone = (formData.get('phone') as string)?.trim() || null
 
@@ -87,16 +88,33 @@ export async function submitRegistration(eventId: string, formData: FormData) {
       full_name: fullName,
       email,
       phone,
+      status: routeToWaitlist ? 'waitlist' : 'pending',
     })
 
   if (insertError) {
     if (insertError.message?.includes('duplicate') || insertError.code === '23505') {
       return { error: 'You have already registered for this event with this email' }
     }
-    return { error: insertError.message }
+    // DB trigger fired — cap was hit between our check and the insert
+    if (insertError.code === 'P0001' && insertError.message?.includes('REGISTRATION_CAP_REACHED')) {
+      routeToWaitlist = true
+      // Re-insert as waitlist
+      const { error: waitlistError } = await supabase
+        .from('registrations')
+        .insert({
+          event_id: eventId,
+          full_name: fullName,
+          email,
+          phone,
+          status: 'waitlist',
+        })
+      if (waitlistError) return { error: waitlistError.message }
+    } else {
+      return { error: insertError.message }
+    }
   }
 
-  return { success: true }
+  return { success: true, waitlisted: routeToWaitlist }
 }
 
 /**
@@ -181,7 +199,7 @@ export async function acceptRegistration(registrationId: string, eventId: string
 }
 
 /**
- * Reject a registration.
+ * Reject a registration — and auto-promote the next waitlisted person if one exists.
  */
 export async function rejectRegistration(registrationId: string, eventId: string) {
   const supabase = await createClient()
@@ -190,6 +208,68 @@ export async function rejectRegistration(registrationId: string, eventId: string
     .from('registrations')
     .update({ status: 'rejected' })
     .eq('id', registrationId)
+
+  if (error) return { error: error.message }
+
+  // Auto-promote first waitlist entry if event has a cap and a spot just opened
+  const { data: event } = await supabase
+    .from('events')
+    .select('max_registrations')
+    .eq('id', eventId)
+    .single()
+
+  if (event?.max_registrations) {
+    const { data: next } = await supabase
+      .from('registrations')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('status', 'waitlist')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (next) {
+      await supabase
+        .from('registrations')
+        .update({ status: 'pending' })
+        .eq('id', next.id)
+    }
+  }
+
+  revalidatePath(`/events/${eventId}/registrations`)
+  return { success: true }
+}
+
+/**
+ * Manually promote a waitlisted registration to pending for organiser review.
+ */
+export async function promoteFromWaitlist(registrationId: string, eventId: string) {
+  const supabase = await createClient()
+
+  // Verify there is capacity before promoting
+  const { data: event } = await supabase
+    .from('events')
+    .select('max_registrations')
+    .eq('id', eventId)
+    .single()
+
+  if (event?.max_registrations) {
+    const { count } = await supabase
+      .from('registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .not('status', 'in', '(rejected,waitlist)')
+
+    if ((count ?? 0) >= event.max_registrations) {
+      return { error: 'No capacity available — reject or accept another registration first.' }
+    }
+  }
+
+  const { error } = await supabase
+    .from('registrations')
+    .update({ status: 'pending' })
+    .eq('id', registrationId)
+    .eq('status', 'waitlist') // safety: only promote if still waitlisted
 
   if (error) return { error: error.message }
 

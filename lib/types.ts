@@ -1,7 +1,7 @@
 export type EventStatus = 'draft' | 'published' | 'live' | 'ended'
 export type EventType = 'closed' | 'open'
 export type InvitationStatus = 'pending' | 'entered' | 'cancelled'
-export type RegistrationStatus = 'pending' | 'accepted' | 'rejected'
+export type RegistrationStatus = 'pending' | 'accepted' | 'rejected' | 'waitlist'
 
 export interface Event {
   id: string
@@ -67,6 +67,7 @@ export interface Registration {
   email: string
   phone: string | null
   status: RegistrationStatus
+  waitlist_position?: number | null
   created_at: string
 }
 

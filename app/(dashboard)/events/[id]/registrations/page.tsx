@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { useParams } from 'next/navigation'
-import { Check, X, Mail, Search, UserPlus, Clock, CheckCircle2, XCircle, Send } from 'lucide-react'
-import { acceptRegistration, rejectRegistration, sendReminderEmails } from '@/app/actions/registrations'
+import { Check, X, Mail, Search, UserPlus, Clock, CheckCircle2, XCircle, Send, ArrowUpCircle } from 'lucide-react'
+import { acceptRegistration, rejectRegistration, promoteFromWaitlist, sendReminderEmails } from '@/app/actions/registrations'
 import { createClient } from '@/lib/supabase/client'
 import { fieldCls, labelCls } from '@/lib/form-styles'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ export default function RegistrationsPage() {
   const { id: eventId } = useParams<{ id: string }>()
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [event, setEvent] = useState<Event | null>(null)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all')
+  const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected' | 'waitlist'>('all')
   const [search, setSearch] = useState('')
   const [isPending, startTransition] = useTransition()
   const [reminderOpen, setReminderOpen] = useState(false)
@@ -118,6 +118,7 @@ export default function RegistrationsPage() {
     pending: registrations.filter(r => r.status === 'pending').length,
     accepted: registrations.filter(r => r.status === 'accepted').length,
     rejected: registrations.filter(r => r.status === 'rejected').length,
+    waitlist: registrations.filter(r => r.status === 'waitlist').length,
   }
 
   // Copy registration link
@@ -132,6 +133,7 @@ export default function RegistrationsPage() {
       pending: 'bg-signal/20 text-signal border-signal/30',
       accepted: 'bg-admitted/20 text-admitted border-admitted/30',
       rejected: 'bg-denied/20 text-denied border-denied/30',
+      waitlist: 'bg-foreground/10 text-foreground/60 border-foreground/20',
     }
     return cls[status] ?? ''
   }
@@ -143,7 +145,7 @@ export default function RegistrationsPage() {
         <SectionHeader
           eyebrow="PUBLIC_REGISTRATIONS"
           title="Registrations"
-          subtitle={`${counts.pending} pending · ${counts.accepted} accepted · ${counts.rejected} rejected`}
+          subtitle={`${counts.pending} pending · ${counts.accepted} accepted · ${counts.rejected} rejected · ${counts.waitlist} waitlist`}
         />
 
         <div className="flex gap-2 shrink-0">
@@ -186,7 +188,7 @@ export default function RegistrationsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="flex gap-0 border-2 border-foreground/20 overflow-hidden">
-          {(['all', 'pending', 'accepted', 'rejected'] as const).map((f) => (
+          {(['all', 'pending', 'accepted', 'rejected', 'waitlist'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -271,11 +273,32 @@ export default function RegistrationsPage() {
                     </Button>
                   </>
                 )}
+                {reg.status === 'waitlist' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-signal/60 hover:text-signal hover:bg-signal/10 transition-all"
+                    onClick={() => {
+                      startTransition(async () => {
+                        const result = await promoteFromWaitlist(reg.id, eventId)
+                        if (result?.error) toast.error(result.error)
+                        else { toast.success(`${reg.full_name} moved to pending`); loadData() }
+                      })
+                    }}
+                    aria-label={`Promote ${reg.full_name} from waitlist`}
+                    title="Promote to pending"
+                  >
+                    <ArrowUpCircle className="h-4 w-4" />
+                  </Button>
+                )}
                 {reg.status === 'accepted' && (
                   <CheckCircle2 className="h-4 w-4 text-admitted/60" />
                 )}
                 {reg.status === 'rejected' && (
                   <XCircle className="h-4 w-4 text-denied/40" />
+                )}
+                {reg.status === 'waitlist' && counts.waitlist > 0 && (
+                  <Clock className="h-4 w-4 text-foreground/30" />
                 )}
               </div>
             </div>

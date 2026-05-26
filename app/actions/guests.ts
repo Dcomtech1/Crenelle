@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { sendInvitationEmail } from '@/lib/email'
+import { validateEmailBlob } from '@/lib/validations/guest-import'
 
 export async function addGuest(eventId: string, formData: FormData) {
   const supabase = await createClient()
@@ -66,19 +67,18 @@ export async function addGuest(eventId: string, formData: FormData) {
 export async function addMultipleGuests(eventId: string, emailsText: string, partySize: number) {
   const supabase = await createClient()
 
-  // Split by newlines, commas, semicolons, or spaces
-  const rawEmails = emailsText.split(/[\n,;\s]+/)
-  const uniqueEmails = Array.from(
-    new Set(
-      rawEmails
-        .map(e => e.trim().toLowerCase())
-        .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
-    )
-  )
+  // Validate and deduplicate using Zod-backed parser
+  const { valid: uniqueEmails, invalid: invalidEntries } = validateEmailBlob(emailsText)
 
   if (uniqueEmails.length === 0) {
-    return { error: 'No valid email addresses found in the input.' }
+    const hint = invalidEntries.length > 0
+      ? ` These entries were invalid: ${invalidEntries.slice(0, 5).join(', ')}${invalidEntries.length > 5 ? ` …and ${invalidEntries.length - 5} more` : ''}`
+      : ''
+    return { error: `No valid email addresses found in the input.${hint}` }
   }
+
+  // Validate party size explicitly (defence-in-depth — client already enforces min/max)
+  const safePartySize = Math.max(1, Math.min(50, Math.floor(partySize) || 1))
 
   // Fetch event details to send invitation emails
   const { data: event } = await supabase
@@ -89,6 +89,11 @@ export async function addMultipleGuests(eventId: string, emailsText: string, par
 
   let addedCount = 0
   const errors: string[] = []
+
+  // Report invalid entries upfront (before the loop)
+  if (invalidEntries.length > 0) {
+    errors.push(`Skipped ${invalidEntries.length} invalid entr${invalidEntries.length === 1 ? 'y' : 'ies'}: ${invalidEntries.slice(0, 3).join(', ')}${invalidEntries.length > 3 ? '…' : ''}`)
+  }
 
   for (const email of uniqueEmails) {
     try {
@@ -117,7 +122,7 @@ export async function addMultipleGuests(eventId: string, emailsText: string, par
         .insert({
           event_id: eventId,
           guest_id: guest.id,
-          party_size: partySize,
+          party_size: safePartySize,
         })
         .select()
         .single()

@@ -20,6 +20,10 @@ Crenelle is a QR-based access control and guest management platform. It lets eve
 - Manage **sender profiles** (branded From: name and reply-to per event or organisation)
 - Monitor **real-time attendance** and registration stats from the dashboard
 - **Invite co-hosts** with granular permissions — Viewer, Scanner Manager, or Co-Organiser — each receiving an automated email notification
+- Navigate deep pages with a beautiful **dynamic breadcrumb trail** (`Events / [Event Name] / [Section]`) for clear spatial context
+- View **status-aware event metrics** (switches automatically between `Invited` for drafts/published events and `Checked In` for live events) across the dashboard and co-hosted lists
+- Manage organisation settings using a dedicated **responsive settings layout** featuring a left sidebar (desktop) and horizontal navigation (mobile)
+- Access the platform on the go with a **responsive mobile bottom navigation bar** with a prominent overlapping central FAB for quick event creation
 
 ### For Ushers / Checkpoint Staff
 - Open a scanner link on any smartphone browser — no app download, no login

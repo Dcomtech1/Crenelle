@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEventAccess } from '@/lib/team-access'
+import { EventTabs } from './event-tabs'
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   live:      { label: 'Live',      cls: 'status-live' },
@@ -112,19 +113,7 @@ export default async function EventLayout({
       </div>
 
       {/* Tab navigation */}
-      <nav aria-label="Event sections" className="mb-10">
-        <div className="flex gap-0 border-b border-border overflow-x-auto">
-          {tabs.map((tab) => (
-            <Link
-              key={tab.label}
-              href={`/events/${id}${tab.href}`}
-              className="relative font-sans text-xs font-semibold uppercase tracking-[0.14em] px-5 py-3 whitespace-nowrap text-muted-foreground hover:text-foreground transition-colors border-b-2 border-transparent -mb-px hover:border-foreground/30 focus-visible:outline-none focus-visible:text-copper focus-visible:border-copper"
-            >
-              {tab.label}
-            </Link>
-          ))}
-        </div>
-      </nav>
+      <EventTabs id={id} tabs={tabs} />
 
       {children}
     </div>

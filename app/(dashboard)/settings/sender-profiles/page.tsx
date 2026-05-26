@@ -30,9 +30,6 @@ export default async function SenderProfilesPage() {
     <div className="max-w-2xl">
       {/* ── Page header ── */}
       <div className="mb-10 pb-8 border-b border-border">
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.3em] text-copper mb-3">
-          Settings
-        </p>
         <h1
           className="font-display font-semibold text-foreground leading-[0.95] tracking-tight mb-2"
           style={{ fontSize: 'clamp(28px, 4vw, 44px)' }}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { Users, UserCheck, Clock, BarChart3 } from 'lucide-react'
+import { Users, UserCheck, Clock, BarChart3, DoorOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { StatCard } from '@/components/stat-card'
 import { SectionHeader } from '@/components/section-header'
@@ -42,6 +42,7 @@ export default function LiveDashboardPage() {
   const [arrivedSeats, setArrivedSeats] = useState(0)
   const [entries, setEntries] = useState<EntryWithGuest[]>([])
   const [pending, setPending] = useState<Array<{ name: string; party_size: number; seat_info: string | null }>>([])
+  const [entranceStats, setEntranceStats] = useState<Array<{ label: string; count: number }>>([])  
 
   useEffect(() => {
     const supabase = createClient()
@@ -102,6 +103,33 @@ export default function LiveDashboardPage() {
             }
           })
       )
+
+      // --- Per-entrance breakdown ---
+      const { data: scanLinks } = await supabase
+        .from('scanner_links')
+        .select('id, label')
+        .eq('event_id', eventId)
+
+      if (scanLinks && scanLinks.length > 0) {
+        const linkIds = scanLinks.map((sl) => sl.id)
+        const { data: entranceLogs } = await supabase
+          .from('entry_logs')
+          .select('scanner_link_id')
+          .in('scanner_link_id', linkIds)
+
+        const countByLink = new Map<string, number>()
+        ;(entranceLogs ?? []).forEach((el) => {
+          if (el.scanner_link_id) {
+            countByLink.set(el.scanner_link_id, (countByLink.get(el.scanner_link_id) ?? 0) + 1)
+          }
+        })
+
+        setEntranceStats(
+          scanLinks
+            .map((sl) => ({ label: sl.label, count: countByLink.get(sl.id) ?? 0 }))
+            .sort((a, b) => b.count - a.count)
+        )
+      }
     }
 
     loadData()
@@ -185,6 +213,35 @@ export default function LiveDashboardPage() {
           />
         </div>
       </div>
+
+      {/* Per-entrance breakdown */}
+      {entranceStats.length > 1 && (
+        <div>
+          <h3 className="font-display text-2xl uppercase text-foreground mb-4 flex items-center gap-2">
+            <DoorOpen className="h-5 w-5 text-foreground/50" aria-hidden="true" />
+            Per Entrance
+          </h3>
+          <div className="flex flex-col gap-3">
+            {entranceStats.map((gate) => {
+              const gatePct = arrived > 0 ? Math.round((gate.count / arrived) * 100) : 0
+              return (
+                <div key={gate.label}>
+                  <div className="flex justify-between items-end mb-1">
+                    <span className="font-mono text-xs uppercase tracking-widest text-foreground/70 truncate mr-4">{gate.label}</span>
+                    <span className="font-mono text-xs text-signal shrink-0">{gate.count} <span className="text-foreground/30">({gatePct}%)</span></span>
+                  </div>
+                  <div className="w-full h-3 bg-background border border-foreground/20 relative p-0.5">
+                    <div
+                      className="h-full bg-signal/60 transition-all duration-700"
+                      style={{ width: `${gatePct}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Recent + Pending columns */}
       <div className="grid gap-6 md:grid-cols-2">

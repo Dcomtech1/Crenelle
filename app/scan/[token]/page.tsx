@@ -84,6 +84,7 @@ export default async function ScannerPage({ params }: { params: Promise<{ token:
       eventName={event?.name ?? ''}
       eventDate={event?.date ?? ''}
       eventVenue={event?.venue ?? ''}
+      eventId={scannerLink.event_id}
     />
   )
 }

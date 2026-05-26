@@ -317,13 +317,22 @@ export async function sendReminderEmails(eventId: string, customMessage: string)
       customMessage,
     })
 
-    if (!res.success) {
+    revalidatePath(`/events/${eventId}`)
+
+    // Surface partial failures as a warning rather than a hard error.
+    // res.success is false if ANY recipient failed, but some may have succeeded.
+    if (res.sent === 0) {
       return { error: `Failed to send reminders: ${res.errors?.join(', ') || 'Unknown error'}` }
+    }
+
+    return {
+      success: true,
+      count: res.sent,
+      warning: res.errors?.length
+        ? `Sent to ${res.sent} guest(s). Failed for: ${res.errors.join(', ')}`
+        : undefined,
     }
   } catch (e: any) {
     return { error: e.message || 'Failed to send reminder emails' }
   }
-
-  revalidatePath(`/events/${eventId}`)
-  return { success: true, count: recipients.length }
 }

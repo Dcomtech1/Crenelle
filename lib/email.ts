@@ -18,6 +18,17 @@ const SENDING_ADDRESS = (
   'onboarding@resend.dev'
 )
 
+// Warn loudly at startup if using the Resend onboarding sandbox address.
+// With this address, Resend only delivers to the account owner's email —
+// all other recipients are silently dropped or rewritten.
+if (SENDING_ADDRESS === 'onboarding@resend.dev') {
+  console.warn(
+    '[email] WARNING: EMAIL_FROM_ADDRESS is not set. Using Resend onboarding sandbox address ' +
+    '(onboarding@resend.dev). Emails will ONLY deliver to the Resend account owner email. ' +
+    'Set EMAIL_FROM_ADDRESS=noreply@yourdomain.com in .env.local with a verified Resend domain.'
+  )
+}
+
 /** Organisation/organiser identity used to personalise the From header and Reply-To. */
 export interface OrganizerDetails {
   /** Display name shown in the From field, e.g. "Acme Events" */
@@ -336,7 +347,7 @@ export async function sendInvitationEmail({
   try {
     const { error: sendError } = await getResend().emails.send({
       from: `${organizer.name} <${SENDING_ADDRESS}>`,
-      replyTo: organizer.email || undefined,
+      ...(organizer.email ? { replyTo: organizer.email } : {}),
       to: recipientEmail,
       subject: `You're confirmed — ${event.name}`,
       html,
@@ -555,7 +566,7 @@ export async function sendReminderEmailsDirect({
     try {
       const { error: sendError } = await getResend().emails.send({
         from: `${organizer.name} <${SENDING_ADDRESS}>`,
-        replyTo: organizer.email || undefined,
+        ...(organizer.email ? { replyTo: organizer.email } : {}),
         to: recipient.email,
         subject: `Reminder — ${event.name}`,
         html,

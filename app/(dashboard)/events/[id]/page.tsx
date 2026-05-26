@@ -115,7 +115,11 @@ export default function EventOverviewPage() {
     if (result?.error) {
       toast.error(result.error)
     } else {
-      toast.success(`Reminder sent to ${result.count} guests`)
+      if (result.warning) {
+        toast.warning(result.warning)
+      } else {
+        toast.success(`Reminder sent to ${result.count} guest${result.count !== 1 ? 's' : ''}`)
+      }
       setReminderOpen(false)
       setReminderMessage('')
     }

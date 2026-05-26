@@ -455,7 +455,7 @@ export default function EventOverviewPage() {
               <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/50 font-bold">
                 NO_BANNER_ATTACHED
               </p>
-              <p className="font-mono text-[9px] uppercase tracking-wide text-foreground/40 mt-2 max-w-[220px] leading-relaxed">
+              <p className="font-mono text-[9px] uppercase tracking-wide text-foreground/40 mt-2 max-w-55 leading-relaxed">
                 Click Edit above to upload a banner for emails and event pages.
               </p>
             </div>

@@ -167,11 +167,14 @@ export async function sendInvitationEmail({
 }: InvitationEmailOptions) {
   const supabase = createAdminClient()
 
-  // Check unsubscribe list before sending
+  // Check unsubscribe list before sending.
+  // A row existing just means we've pre-seeded a token; only treat as opted-out
+  // when unsubscribed_at is actually set (i.e. the guest clicked the link).
   const { data: unsub } = await supabase
     .from('email_unsubscribes')
     .select('id')
     .ilike('email', recipientEmail)
+    .not('unsubscribed_at', 'is', null)
     .maybeSingle()
 
   if (unsub) {
@@ -387,10 +390,13 @@ export async function sendReminderEmailsDirect({
   // Resolve organiser identity once — shared across all recipients in this batch
   const organizer = await fetchOrganizerForEvent(eventId)
 
-  // Filter out unsubscribed recipients before we even start
+  // Filter out unsubscribed recipients before we even start.
+  // Only treat as opted-out when unsubscribed_at is set — a row with no
+  // unsubscribed_at is just a pre-seeded token, NOT an opt-out.
   const { data: unsubList } = await supabase
     .from('email_unsubscribes')
     .select('email')
+    .not('unsubscribed_at', 'is', null)
   const unsubSet = new Set((unsubList ?? []).map((r: { email: string }) => r.email.toLowerCase()))
   const filteredRecipients = recipients.filter(r => !unsubSet.has(r.email.toLowerCase()))
 
@@ -564,7 +570,7 @@ export async function sendReminderEmailsDirect({
 </html>`
 
     try {
-      const { error: sendError } = await getResend().emails.send({
+      const { data: sendData, error: sendError } = await getResend().emails.send({
         from: `${organizer.name} <${SENDING_ADDRESS}>`,
         ...(organizer.email ? { replyTo: organizer.email } : {}),
         to: recipient.email,
@@ -573,10 +579,13 @@ export async function sendReminderEmailsDirect({
       })
 
       if (sendError) {
-        console.error(`Resend error for ${recipient.email}:`, sendError)
-        errors.push(`${recipient.email}: ${sendError.message || 'unknown error'}`)
+        // Resend SDK error object has name + message; log the full object for debugging
+        const errMsg = sendError.message || (sendError as any).name || JSON.stringify(sendError)
+        console.error(`Resend error for ${recipient.email}:`, JSON.stringify(sendError))
+        errors.push(`${recipient.email}: ${errMsg}`)
       } else {
         sent++
+        console.log(`[email] Reminder sent to ${recipient.email}, id=${sendData?.id}`)
         // Log the email
         await supabase.from('email_logs').insert({
           event_id: eventId,
@@ -586,8 +595,9 @@ export async function sendReminderEmailsDirect({
         })
       }
     } catch (e: any) {
-      console.error(`Exception sending reminder to ${recipient.email}:`, e)
-      errors.push(`${recipient.email}: ${e.message || 'failed exception'}`)
+      const errMsg = e.message || e.name || JSON.stringify(e)
+      console.error(`Exception sending reminder to ${recipient.email}:`, errMsg)
+      errors.push(`${recipient.email}: ${errMsg}`)
     }
 
     // Rate-limit throttling: Resend free tier allows 5 requests/second.

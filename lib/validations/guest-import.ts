@@ -104,7 +104,7 @@ export function validateCsvRows(
       errors.push({
         row: i + 2, // +2 because row 1 is header, and humans count from 1
         raw: Object.values(raw).join(', '),
-        message: result.error.errors.map((e) => e.message).join('; '),
+        message: result.error.issues.map((e) => e.message).join('; '),
       })
     }
   }

@@ -1,21 +1,19 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-
-const baseTabs = [
-  { label: 'Overview',       href: '' },
-  { label: 'Guests',         href: '/guests' },
-  { label: 'Live Dashboard', href: '/dashboard' },
-  { label: 'Scanner Links',  href: '/scanner-links' },
-  { label: 'Passes',         href: '/cards' },
-]
+import { getEventAccess } from '@/lib/team-access'
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   live:      { label: 'Live',      cls: 'status-live' },
   published: { label: 'Published', cls: 'status-published' },
   draft:     { label: 'Draft',     cls: 'status-draft' },
   ended:     { label: 'Ended',     cls: 'status-ended' },
+}
+
+const roleLabels: Record<string, string> = {
+  viewer:          'CO-HOST // VIEWER',
+  scanner_manager: 'CO-HOST // SCANNER MGR',
 }
 
 export default async function EventLayout({
@@ -30,18 +28,34 @@ export default async function EventLayout({
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, date, status, event_type')
+    .select('id, name, date, status, event_type, organizer_id')
     .eq('id', id)
     .single()
 
   if (!event) notFound()
 
+  // Resolve current user's role (owner | viewer | scanner_manager | null)
+  const access = await getEventAccess(id)
+  if (!access.role) notFound() // no access at all
+
   const statusInfo = statusConfig[event.status] ?? { label: event.status, cls: 'status-draft' }
+
+  // Build tab list based on event type and role
+  const baseTabs = [
+    { label: 'Overview',       href: '' },
+    { label: 'Guests',         href: '/guests' },
+    { label: 'Live Dashboard', href: '/dashboard' },
+    { label: 'Scanner Links',  href: '/scanner-links' },
+    { label: 'Passes',         href: '/cards' },
+  ]
 
   const tabs = [...baseTabs]
   if (event.event_type === 'open') {
-    // Insert Registrations after Guests (index 2)
     tabs.splice(2, 0, { label: 'Registrations', href: '/registrations' })
+  }
+  // Team tab only visible to the owner
+  if (access.isOwner) {
+    tabs.push({ label: 'Team', href: '/team' })
   }
 
   return (
@@ -76,6 +90,13 @@ export default async function EventLayout({
             {event.event_type === 'open' && (
               <span className="font-sans text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 border border-copper/40 text-copper">
                 Open event
+              </span>
+            )}
+            {/* Co-host role badge — only shown to non-owners */}
+            {!access.isOwner && access.role && (
+              <span className="inline-flex items-center gap-1.5 font-sans text-[9px] font-semibold uppercase tracking-widest px-2 py-0.5 border border-signal/40 text-signal">
+                <Users className="h-2.5 w-2.5" aria-hidden="true" />
+                {roleLabels[access.role] ?? 'CO-HOST'}
               </span>
             )}
           </div>

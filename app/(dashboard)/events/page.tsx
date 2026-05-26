@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { getCoHostedEvents } from '@/app/actions/team'
 import { EventsDashboardClient } from './events-dashboard'
 import type { Event, Invitation } from '@/lib/types'
 
@@ -19,6 +20,23 @@ export default async function EventsPage() {
   const { data: logs } = await supabase
     .from('entry_logs')
     .select('invitation_id')
+
+  // Co-hosted events (events this user has been invited to as a member)
+  const { memberships } = await getCoHostedEvents()
+  let coHostedEvents: Array<Event & { memberRole: string }> = []
+
+  if (memberships.length > 0) {
+    const { data: memberEvents } = await supabase
+      .from('events')
+      .select('*')
+      .in('id', memberships.map(m => m.event_id))
+      .order('date', { ascending: false })
+
+    coHostedEvents = (memberEvents ?? []).map(ev => ({
+      ...(ev as Event),
+      memberRole: memberships.find(m => m.event_id === ev.id)?.role ?? 'viewer',
+    }))
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -52,6 +70,7 @@ export default async function EventsPage() {
         initialEvents={(events as Event[]) || []} 
         initialInvitations={(invitations as Invitation[]) || []}
         initialLogs={(logs as { invitation_id: string }[]) || []}
+        coHostedEvents={coHostedEvents}
       />
     </div>
   )

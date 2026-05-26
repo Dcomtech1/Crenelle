@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react"
 import Link from "next/link"
-import { Trash2 } from "lucide-react"
+import { Trash2, Users } from "lucide-react"
 import { EventCard } from "@/components/event-card"
 import { DeleteEventDialog } from "@/components/delete-event-dialog"
 import { StatusChangeDialog } from "@/components/status-change-dialog"
-import { EmptyState } from "@/components/empty-state"
 import { deleteEvent } from "@/app/actions/events"
 import type { Event, Invitation } from "@/lib/types"
 
@@ -19,12 +18,19 @@ interface EventsDashboardClientProps {
   initialEvents: Event[]
   initialInvitations: Invitation[]
   initialLogs: { invitation_id: string }[]
+  coHostedEvents?: Array<Event & { memberRole: string }>
+}
+
+const roleLabels: Record<string, string> = {
+  viewer: 'Viewer',
+  scanner_manager: 'Scanner Manager',
 }
 
 export function EventsDashboardClient({
   initialEvents,
   initialInvitations,
   initialLogs,
+  coHostedEvents = [],
 }: EventsDashboardClientProps) {
   const { events, eventStats, stats, remaining, capacityPercent } =
     useDashboardData({ initialEvents, initialInvitations, initialLogs })
@@ -106,7 +112,7 @@ export function EventsDashboardClient({
                       />
                     </Link>
 
-                    {/* Delete button — bottom-right to avoid status tag overlap */}
+                    {/* Delete button */}
                     <button
                       onClick={(e) => {
                         e.preventDefault()
@@ -138,6 +144,52 @@ export function EventsDashboardClient({
               }}
             />
           </>
+        )}
+
+        {/* ── Co-hosting section ── */}
+        {coHostedEvents.length > 0 && (
+          <div className="mt-8 pt-8 border-t border-border">
+            <div className="flex items-center gap-2 mb-5">
+              <Users className="h-4 w-4 text-signal" aria-hidden="true" />
+              <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.28em] text-signal">
+                Co-hosting
+              </p>
+              <span className="font-sans text-[10px] text-muted-foreground ml-1">
+                — events you've been invited to collaborate on
+              </span>
+            </div>
+            <div className="flex flex-col gap-4">
+              {coHostedEvents.map(event => {
+                const cardStatus = event.status === "live" ? "LIVE"
+                  : event.status === "published" ? "PUBLISHED"
+                  : event.status === "ended" ? "CLOSED"
+                  : "DRAFT"
+                return (
+                  <div key={event.id} className="relative">
+                    {/* Role badge overlay */}
+                    <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-background/90 border border-signal/30 px-2 py-0.5 backdrop-blur-sm">
+                      <Users className="h-2.5 w-2.5 text-signal" aria-hidden="true" />
+                      <span className="font-sans text-[9px] font-semibold uppercase tracking-widest text-signal">
+                        {roleLabels[event.memberRole] ?? 'Co-host'}
+                      </span>
+                    </div>
+                    <Link href={`/events/${event.id}`}>
+                      <EventCard
+                        name={event.name}
+                        date={new Date(event.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase()}
+                        time={event.time?.slice(0, 5) ?? ""}
+                        guestCount={0}
+                        capacity={event.capacity || 0}
+                        eventType={event.event_type || 'closed'}
+                        status={cardStatus}
+                        onStatusClick={() => {}}
+                      />
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         )}
       </div>
 

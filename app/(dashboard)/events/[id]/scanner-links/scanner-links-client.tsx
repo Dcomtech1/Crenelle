@@ -129,6 +129,17 @@ export default function ScannerLinksClient({ canManage }: { canManage: boolean }
           icon={<Link2 className="h-10 w-10" />}
           title="NO_LINKS_YET"
           subtitle="Create a scanner link and share it with your ushers on event day"
+          action={
+            canManage ? (
+              <button
+                onClick={() => setAddOpen(true)}
+                className="inline-flex items-center gap-2 bg-foreground text-background font-mono text-xs font-semibold uppercase tracking-widest px-5 py-3 hover:opacity-80 transition-opacity cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                CREATE_YOUR_FIRST_LINK
+              </button>
+            ) : null
+          }
         />
       ) : (
         <div className="flex flex-col gap-3">

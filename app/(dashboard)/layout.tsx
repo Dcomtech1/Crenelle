@@ -40,7 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="flex items-center gap-1">
             <Link
               href="/events/new"
-              className="inline-flex items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70 hover:text-foreground border border-border hover:border-foreground/30 bg-transparent hover:bg-foreground/4 transition-all h-8 px-3 hidden sm:inline-flex"
+              className="items-center gap-1.5 font-sans text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/70 hover:text-foreground border border-border hover:border-foreground/30 bg-transparent hover:bg-foreground/4 transition-all h-8 px-3 hidden sm:inline-flex"
               aria-label="New Event"
             >
               <Plus className="h-3.5 w-3.5 text-copper" aria-hidden="true" />

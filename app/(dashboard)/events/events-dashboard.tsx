@@ -33,7 +33,7 @@ export function EventsDashboardClient({
   initialLogs,
   coHostedEvents = [],
 }: EventsDashboardClientProps) {
-  const { events, eventStats, stats, remaining, capacityPercent } =
+  const { events, invitations, logs, eventStats, stats, remaining, capacityPercent } =
     useDashboardData({ initialEvents, initialInvitations, initialLogs })
 
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null)
@@ -88,11 +88,15 @@ export function EventsDashboardClient({
 
             <div className="flex flex-col gap-4">
               {filtered.map((event) => {
-                const s = eventStats[event.id] || { checkedIn: 0, totalCapacity: 0 }
+                const s = eventStats[event.id] || { checkedIn: 0, totalInvited: 0, totalCapacity: 0 }
                 const cardStatus = event.status === "live" ? "LIVE"
                   : event.status === "published" ? "PUBLISHED"
                   : event.status === "ended" ? "CLOSED"
                   : "DRAFT"
+
+                const isLive = event.status === "live"
+                const guestCount = isLive ? s.checkedIn : s.totalInvited
+                const guestLabel = isLive ? "Checked in" : "Invited"
 
                 return (
                   <div key={event.id} className="relative group">
@@ -101,7 +105,8 @@ export function EventsDashboardClient({
                         name={event.name}
                         date={new Date(event.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase()}
                         time={event.time?.slice(0, 5) ?? ""}
-                        guestCount={s.checkedIn}
+                        guestCount={guestCount}
+                        guestLabel={guestLabel}
                         capacity={event.capacity || 0}
                         eventType={event.event_type || 'closed'}
                         status={cardStatus}
@@ -165,6 +170,22 @@ export function EventsDashboardClient({
                   : event.status === "published" ? "PUBLISHED"
                   : event.status === "ended" ? "CLOSED"
                   : "DRAFT"
+
+                // Compute real-time stats for co-hosted event
+                const eventInvitations = invitations.filter(
+                  (inv) => inv.event_id === event.id && inv.status !== "cancelled"
+                )
+                const eventLogs = logs.filter((log) => {
+                  const inv = invitations.find((i) => i.id === log.invitation_id)
+                  return inv?.event_id === event.id
+                })
+                const totalInvited = eventInvitations.reduce((sum, inv) => sum + inv.party_size, 0)
+                const checkedIn = eventLogs.length
+
+                const isLive = event.status === "live"
+                const guestCount = isLive ? checkedIn : totalInvited
+                const guestLabel = isLive ? "Checked in" : "Invited"
+
                 return (
                   <div key={event.id} className="relative">
                     {/* Role badge overlay */}
@@ -179,7 +200,8 @@ export function EventsDashboardClient({
                         name={event.name}
                         date={new Date(event.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase()}
                         time={event.time?.slice(0, 5) ?? ""}
-                        guestCount={0}
+                        guestCount={guestCount}
+                        guestLabel={guestLabel}
                         capacity={event.capacity || 0}
                         eventType={event.event_type || 'closed'}
                         status={cardStatus}

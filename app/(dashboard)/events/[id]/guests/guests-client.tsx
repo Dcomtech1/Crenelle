@@ -145,6 +145,18 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
           icon={<Users className="h-10 w-10" />}
           title="NO_GUESTS_YET"
           subtitle="Add guests to generate their QR entry cards"
+          action={
+            canEdit ? (
+              <Button
+                variant="signal"
+                onClick={() => setAddOpen(true)}
+                className="gap-2 h-11 px-5 text-xs font-mono tracking-widest uppercase"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                ADD_YOUR_FIRST_GUEST
+              </Button>
+            ) : null
+          }
         />
       ) : (
         <div className="border-2 border-foreground/10 overflow-hidden">

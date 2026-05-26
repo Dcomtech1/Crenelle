@@ -4,6 +4,7 @@ import { ArrowLeft, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getEventAccess } from '@/lib/team-access'
 import { EventTabs } from './event-tabs'
+import { EventBreadcrumbs } from './event-breadcrumbs'
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   live:      { label: 'Live',      cls: 'status-live' },
@@ -62,14 +63,17 @@ export default async function EventLayout({
 
   return (
     <div>
-      {/* Back link */}
-      <Link
-        href="/events"
-        className="inline-flex items-center gap-2 font-sans text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground transition-colors mb-8 group"
-      >
-        <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-1 transition-transform" aria-hidden="true" />
-        All events
-      </Link>
+      {/* Navigation header row: Back Link on left, Breadcrumbs on right */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <Link
+          href="/events"
+          className="inline-flex items-center gap-2 font-sans text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-1 transition-transform" aria-hidden="true" />
+          All events
+        </Link>
+        <EventBreadcrumbs id={id} eventName={event.name} />
+      </div>
 
       {/* Event heading */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 pb-6 border-b border-border">

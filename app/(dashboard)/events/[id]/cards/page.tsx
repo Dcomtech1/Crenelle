@@ -72,20 +72,20 @@ export default function CardsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 border-b-2 border-foreground/10 pb-6 print:hidden">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-signal mb-1">ENTRY_CARD_MANIFEST</p>
-          <h2 className="font-display text-4xl uppercase text-foreground leading-none">Entry Cards</h2>
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-signal mb-1">QR_PASS_MANIFEST</p>
+          <h2 className="font-display text-4xl uppercase text-foreground leading-none">QR Passes</h2>
           <p className="font-mono text-xs text-foreground/70 uppercase tracking-widest mt-2">
-            {cards.length} card{cards.length !== 1 ? 's' : ''} ready to print
+            {cards.length} pass{cards.length !== 1 ? 'es' : ''} ready to print
           </p>
         </div>
         <Button
           onClick={() => window.print()}
           variant="signal"
           className="gap-2 h-12 px-6 text-sm shrink-0"
-          aria-label="Print all entry cards"
+          aria-label="Print all QR passes"
         >
           <Printer className="h-4 w-4" aria-hidden="true" />
-          PRINT_ALL_CARDS
+          PRINT_ALL_PASSES
         </Button>
       </div>
 

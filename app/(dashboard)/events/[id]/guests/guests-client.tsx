@@ -94,6 +94,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
     }
   }
 
+
   async function handleBulkAdd(emailsText: string, partySize: number) {
     setIsSaving(true)
     try {

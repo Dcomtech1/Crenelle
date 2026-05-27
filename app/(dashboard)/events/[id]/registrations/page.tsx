@@ -12,7 +12,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
 import { toast } from 'sonner'
-import type { Event } from '@/lib/types'
+import type { Event, TicketTier } from '@/lib/types'
 
 interface Registration {
   id: string
@@ -22,6 +22,7 @@ interface Registration {
   phone: string | null
   status: 'pending' | 'accepted' | 'rejected' | 'waitlist'
   created_at: string
+  ticket_tier?: TicketTier | null
 }
 
 export default function RegistrationsPage() {
@@ -42,7 +43,7 @@ export default function RegistrationsPage() {
     const [{ data: attendees }, { data: ev }] = await Promise.all([
       supabase
         .from('attendees')
-        .select('*')
+        .select('*, ticket_tier:ticket_tiers(*)')
         .eq('event_id', eventId)
         .eq('source', 'public_registration')
         .order('created_at', { ascending: true }),
@@ -61,6 +62,7 @@ export default function RegistrationsPage() {
       phone: a.phone,
       status: a.registration_status,
       created_at: a.created_at,
+      ticket_tier: a.ticket_tier ?? null,
     }))
 
     setRegistrations(mappedRegs as any[])
@@ -263,7 +265,14 @@ export default function RegistrationsPage() {
               key={reg.id}
               className="grid grid-cols-[1fr_1fr_auto_auto_auto] items-center px-4 py-4 gap-4 border-b border-foreground/5 hover:bg-foreground/2 transition-colors group"
             >
-              <span className="font-mono text-sm text-foreground font-medium truncate">{reg.full_name}</span>
+              <div className="flex flex-col truncate">
+                <span className="font-mono text-sm text-foreground font-medium truncate">{reg.full_name}</span>
+                {reg.ticket_tier?.name && (
+                  <span className="inline-block self-start font-mono text-[9px] uppercase tracking-wider bg-foreground/10 text-foreground px-1.5 py-0.5 mt-1 font-semibold">
+                    {reg.ticket_tier.name}
+                  </span>
+                )}
+              </div>
               <div className="flex flex-col">
                 <span className="font-mono text-xs text-foreground/60 truncate">{reg.email}</span>
                 {reg.phone && <span className="font-mono text-[10px] text-foreground/40 truncate">{reg.phone}</span>}

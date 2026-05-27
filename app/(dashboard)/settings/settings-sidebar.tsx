@@ -67,8 +67,8 @@ export function SettingsSidebar() {
                 aria-current={isActive ? 'page' : undefined}
                 className={`flex items-center gap-2 px-3 py-2 font-mono text-[11px] uppercase tracking-wider transition-all whitespace-nowrap shrink-0 ${
                   isActive
-                    ? 'text-copper border-l-2 border-copper pl-[11px] bg-foreground/[0.02]'
-                    : 'text-muted-foreground hover:text-foreground border-l border-transparent hover:border-border/30 hover:bg-foreground/[0.01]'
+                    ? 'text-copper border-l-2 border-copper pl-[11px] bg-foreground/2'
+                    : 'text-muted-foreground hover:text-foreground border-l border-transparent hover:border-border/30 hover:bg-foreground/1'
                 }`}
               >
                 <Icon className="size-3.5" aria-hidden="true" />

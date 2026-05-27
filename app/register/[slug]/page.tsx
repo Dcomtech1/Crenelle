@@ -17,6 +17,7 @@ interface EventInfo {
   max_registrations: number | null
   registration_count: number
   banner_url?: string | null
+  tiers?: Array<{ id: string; name: string; price: number; currency: string }>
 }
 
 export default function PublicRegistrationPage() {
@@ -302,6 +303,29 @@ export default function PublicRegistrationPage() {
                     className="w-full bg-background border-2 border-foreground/40 text-foreground font-mono text-sm px-4 py-3 placeholder:text-foreground/40 focus:outline-none focus:border-signal transition-colors"
                   />
                 </div>
+
+                {event.tiers && event.tiers.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <label
+                      htmlFor="reg-tier"
+                      className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/80"
+                    >
+                      Select Ticket Tier *
+                    </label>
+                    <select
+                      id="reg-tier"
+                      name="ticket_tier_id"
+                      required
+                      className="w-full bg-background border-2 border-foreground/40 text-foreground font-mono text-sm px-4 py-3 focus:outline-none focus:border-signal transition-colors"
+                    >
+                      {event.tiers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} (₦{(t.price / 100).toLocaleString()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <button
                   type="submit"

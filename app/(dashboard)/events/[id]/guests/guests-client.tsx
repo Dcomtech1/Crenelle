@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import { useParams } from 'next/navigation'
 import { Plus, Pencil, X, Users, Lock } from 'lucide-react'
-import { addGuest, updateGuest, deleteGuest, addMultipleGuests } from '@/app/actions/guests'
+import { addAttendee, updateAttendee, cancelAttendeeInvitation, addMultipleAttendees } from '@/app/actions/attendees'
 import { createClient } from '@/lib/supabase/client'
 import { fieldCls, labelCls, hintCls } from '@/lib/form-styles'
 import { Button } from '@/components/ui/button'
@@ -13,13 +13,16 @@ import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import type { Invitation, Guest } from '@/lib/types'
+import type { Invitation, Attendee, TicketTier } from '@/lib/types'
 
-type GuestWithInvitation = Guest & { invitation: Invitation | null }
+type GuestWithInvitation = Attendee & {
+  invitation: (Invitation & { ticket_tier?: TicketTier | null }) | null
+}
 
 export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   const { id: eventId } = useParams<{ id: string }>()
   const [guests, setGuests] = useState<GuestWithInvitation[]>([])
+  const [tiers, setTiers] = useState<any[]>([])
   const [addOpen, setAddOpen] = useState(false)
   const [editGuest, setEditGuest] = useState<GuestWithInvitation | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<GuestWithInvitation | null>(null)
@@ -29,24 +32,38 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   async function loadGuests() {
     const supabase = createClient()
     const { data } = await supabase
-      .from('guests')
-      .select('*, invitation:invitations(*)')
+      .from('attendees')
+      .select('*, invitations(*, ticket_tier:ticket_tiers(*))')
       .eq('event_id', eventId)
+      .in('source', ['imported', 'manual'])
       .order('created_at', { ascending: true })
-    setGuests((data as any[])?.map(g => ({ ...g, invitation: g.invitation?.[0] ?? null })) ?? [])
+    setGuests((data as any[])?.map(g => ({ ...g, invitation: g.invitations?.[0] ?? null })) ?? [])
+  }
+
+  async function loadTiers() {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('ticket_tiers')
+      .select('*')
+      .eq('event_id', eventId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+    setTiers(data ?? [])
   }
 
   useEffect(() => {
     const supabase = createClient()
 
     loadGuests()
+    loadTiers()
 
-    const poll = setInterval(loadGuests, 10000)
+    const poll = setInterval(() => { loadGuests(); loadTiers() }, 10000)
 
     const channel = supabase
       .channel(`guests-${eventId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests',      filter: `event_id=eq.${eventId}` }, () => loadGuests())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendees',   filter: `event_id=eq.${eventId}` }, () => loadGuests())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'invitations', filter: `event_id=eq.${eventId}` }, () => loadGuests())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ticket_tiers', filter: `event_id=eq.${eventId}` }, () => loadTiers())
       .subscribe()
 
     return () => {
@@ -57,7 +74,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
 
   async function handleAdd(formData: FormData) {
     startTransition(async () => {
-      const result = await addGuest(eventId, formData)
+      const result = await addAttendee(eventId, formData)
       if (result?.error) toast.error(result.error)
       else { toast.success('Guest added'); setAddOpen(false); loadGuests() }
     })
@@ -65,7 +82,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
 
   async function handleBulkAdd(emailsText: string, partySize: number) {
     startTransition(async () => {
-      const result = await addMultipleGuests(eventId, emailsText, partySize)
+      const result = await addMultipleAttendees(eventId, emailsText, partySize)
       if (result?.error) toast.error(result.error)
       else {
         if (result?.warning) {
@@ -82,7 +99,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   async function handleUpdate(formData: FormData) {
     if (!editGuest) return
     startTransition(async () => {
-      const result = await updateGuest(editGuest.id, eventId, formData)
+      const result = await updateAttendee(editGuest.id, eventId, formData)
       if (result?.error) toast.error(result.error)
       else { toast.success('Guest updated'); setEditGuest(null); loadGuests() }
     })
@@ -122,7 +139,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="single" className="mt-0">
-                  <GuestForm onSubmit={handleAdd} loading={isPending} prefix="add" />
+                  <GuestForm onSubmit={handleAdd} loading={isPending} prefix="add" tiers={tiers} />
                 </TabsContent>
                 <TabsContent value="bulk" className="mt-0">
                   <BulkGuestForm onSubmit={handleBulkAdd} loading={isPending} />
@@ -173,7 +190,14 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
               key={guest.id}
               className="grid grid-cols-[1fr_1fr_auto_auto_auto] items-center px-4 py-4 gap-4 border-b border-foreground/5 hover:bg-foreground/2 transition-colors group"
             >
-              <span className="font-mono text-sm text-foreground font-medium truncate">{guest.name}</span>
+              <div className="flex flex-col truncate">
+                <span className="font-mono text-sm text-foreground font-medium truncate">{guest.name}</span>
+                {guest.invitation?.ticket_tier?.name && (
+                  <span className="inline-block self-start font-mono text-[9px] uppercase tracking-wider bg-foreground/10 text-foreground px-1.5 py-0.5 mt-1 font-semibold">
+                    {guest.invitation.ticket_tier.name}
+                  </span>
+                )}
+              </div>
               <span className="font-mono text-xs text-foreground/60 truncate">{guest.phone || guest.email || '—'}</span>
               <span className="font-display text-lg text-signal" aria-label={`Party size: ${guest.invitation?.party_size ?? 1}`}>
                 +{guest.invitation?.party_size ?? 1}
@@ -222,12 +246,14 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
                   onSubmit={handleUpdate}
                   loading={isPending}
                   prefix="edit"
+                  tiers={tiers}
                   defaultValues={{
                     name: editGuest.name,
                     phone: editGuest.phone ?? '',
                     email: editGuest.email ?? '',
                     party_size: editGuest.invitation?.party_size ?? 1,
                     seat_info: editGuest.invitation?.seat_info ?? '',
+                    ticket_tier_id: editGuest.invitation?.ticket_tier_id ?? '',
                   }}
                 />
               )}
@@ -237,19 +263,19 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
           <ConfirmDialog
             open={!!deleteTarget}
             onOpenChange={(open) => !open && setDeleteTarget(null)}
-            title="REMOVE_GUEST"
+            title="CANCEL_INVITATION"
             description="THIS_ACTION_IS_IRREVERSIBLE"
             subject={deleteTarget?.name}
             subjectLabel="TARGET_GUEST"
-            body="Removing this guest will delete their invitation and QR code. This cannot be undone."
-            confirmLabel="REMOVE_GUEST"
+            body="Cancelling this guest's invitation will invalidate their QR code entry pass. This cannot be undone."
+            confirmLabel="CANCEL_INVITATION"
             isPending={isDeleting}
             onConfirm={() => {
               if (!deleteTarget) return
               startDeleteTransition(async () => {
-                const result = await deleteGuest(deleteTarget.id, eventId)
+                const result = await cancelAttendeeInvitation(deleteTarget.id, eventId)
                 if (result?.error) toast.error(result.error)
-                else { toast.success('Guest removed'); loadGuests(); setDeleteTarget(null) }
+                else { toast.success('Invitation cancelled'); loadGuests(); setDeleteTarget(null) }
               })
             }}
           />
@@ -264,11 +290,13 @@ function GuestForm({
   loading,
   defaultValues,
   prefix,
+  tiers,
 }: {
   onSubmit: (f: FormData) => void
   loading: boolean
   prefix: string
-  defaultValues?: { name: string; phone: string; email: string; party_size: number; seat_info: string }
+  defaultValues?: { name: string; phone: string; email: string; party_size: number; seat_info: string; ticket_tier_id?: string | null }
+  tiers: any[]
 }) {
   return (
     <form action={onSubmit} className="flex flex-col gap-5 mt-2">
@@ -297,6 +325,23 @@ function GuestForm({
           <label htmlFor={`${prefix}-g-seat`} className={labelCls}>Seat / Table</label>
           <input id={`${prefix}-g-seat`} name="seat_info" defaultValue={defaultValues?.seat_info} placeholder="e.g. Table 5" className={fieldCls} />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor={`${prefix}-g-tier`} className={labelCls}>Ticket Tier</label>
+        <select
+          id={`${prefix}-g-tier`}
+          name="ticket_tier_id"
+          defaultValue={defaultValues?.ticket_tier_id ?? ''}
+          className={`${fieldCls} appearance-none cursor-pointer pr-8 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:0.65rem_auto] bg-[right_1rem_center] bg-no-repeat`}
+        >
+          <option value="">No Tier / Standard</option>
+          {tiers.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name} ({t.price === 0 ? 'Free' : `${(t.price / 100).toLocaleString()} ${t.currency || 'NGN'}`})
+            </option>
+          ))}
+        </select>
       </div>
 
       <Button type="submit" variant="signal" className="w-full h-12 text-sm mt-2" disabled={loading}>

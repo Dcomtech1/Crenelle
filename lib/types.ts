@@ -1,7 +1,8 @@
 export type EventStatus = 'draft' | 'published' | 'live' | 'ended'
 export type EventType = 'closed' | 'open'
-export type InvitationStatus = 'pending' | 'entered' | 'cancelled'
+export type InvitationStatus = 'pending' | 'active' | 'cancelled' | 'checked_in' | 'expired'
 export type RegistrationStatus = 'pending' | 'accepted' | 'rejected' | 'waitlist'
+export type AttendeeSource = 'imported' | 'public_registration' | 'manual'
 
 export interface Event {
   id: string
@@ -18,28 +19,70 @@ export interface Event {
   max_registrations: number | null
   banner_url?: string | null
   sender_profile_id?: string | null
+  timezone: string // NEW — default 'Africa/Lagos'
   created_at: string
   updated_at: string
 }
 
-export interface Guest {
+export interface Attendee {
   id: string
   event_id: string
   name: string
-  phone: string | null
   email: string | null
+  phone: string | null
+  source: AttendeeSource
+  registration_status: RegistrationStatus | null
+  ticket_tier_id: string | null
   created_at: string
 }
 
 export interface Invitation {
   id: string
   event_id: string
-  guest_id: string
+  attendee_id: string
   party_size: number
   seat_info: string | null
   status: InvitationStatus
+  ticket_tier_id: string | null
+  payment_reference: string | null
+  qr_token: string
+  checked_in_at: string | null
+  checked_in_by: string | null
   created_at: string
-  guest?: Guest
+  attendee?: Attendee
+}
+
+export interface TicketTier {
+  id: string
+  event_id: string
+  name: string
+  price: number // stored in kobo (NGN)
+  capacity: number | null
+  is_public: boolean
+  currency: string
+  deleted_at: string | null
+  created_at: string
+}
+
+export interface TierPerk {
+  id: string
+  tier_id: string
+  label: string
+  icon: string | null
+  sort_order: number | null
+  created_at: string
+}
+
+export interface InvitationAuditLog {
+  id: string
+  invitation_id: string
+  changed_by: string | null
+  old_status: InvitationStatus | null
+  new_status: InvitationStatus | null
+  old_tier_id: string | null
+  new_tier_id: string | null
+  reason: string | null
+  created_at: string
 }
 
 export interface ScannerLink {
@@ -57,18 +100,7 @@ export interface EntryLog {
   scanner_link_id: string | null
   scanned_at: string
   notes: string | null
-  invitation?: Invitation & { guest?: Guest }
-}
-
-export interface Registration {
-  id: string
-  event_id: string
-  full_name: string
-  email: string
-  phone: string | null
-  status: RegistrationStatus
-  waitlist_position?: number | null
-  created_at: string
+  invitation?: Invitation & { attendee?: Attendee }
 }
 
 export interface EmailLog {

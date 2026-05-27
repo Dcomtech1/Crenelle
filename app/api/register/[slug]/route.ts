@@ -31,10 +31,20 @@ export async function GET(
 
   // Count current non-rejected registrations
   const { count } = await supabase
-    .from('registrations')
+    .from('attendees')
     .select('*', { count: 'exact', head: true })
     .eq('event_id', event.id)
-    .neq('status', 'rejected')
+    .eq('source', 'public_registration')
+    .neq('registration_status', 'rejected')
+
+  // Fetch active public ticket tiers
+  const { data: tiers } = await supabase
+    .from('ticket_tiers')
+    .select('id, name, price, currency')
+    .eq('event_id', event.id)
+    .is('deleted_at', null)
+    .eq('is_public', true)
+    .order('created_at', { ascending: true })
 
   return NextResponse.json({
     id: event.id,
@@ -47,5 +57,6 @@ export async function GET(
     max_registrations: event.max_registrations,
     registration_count: count ?? 0,
     banner_url: event.banner_url,
+    tiers: tiers ?? [],
   })
 }

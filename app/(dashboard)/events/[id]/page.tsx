@@ -48,14 +48,15 @@ export default function EventOverviewPage() {
 
     async function loadRegCounts() {
       const { data } = await supabase
-        .from('registrations')
-        .select('status')
+        .from('attendees')
+        .select('registration_status')
         .eq('event_id', id)
+        .eq('source', 'public_registration')
       if (data) {
         setRegCounts({
-          pending: data.filter(r => r.status === 'pending').length,
-          accepted: data.filter(r => r.status === 'accepted').length,
-          rejected: data.filter(r => r.status === 'rejected').length,
+          pending: data.filter(r => r.registration_status === 'pending').length,
+          accepted: data.filter(r => r.registration_status === 'accepted').length,
+          rejected: data.filter(r => r.registration_status === 'rejected').length,
         })
       }
     }
@@ -69,7 +70,7 @@ export default function EventOverviewPage() {
     const channel = supabase
       .channel(`event-detail-${id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${id}` }, () => loadEvent())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations', filter: `event_id=eq.${id}` }, () => loadRegCounts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendees', filter: `event_id=eq.${id}` }, () => loadRegCounts())
       .subscribe()
 
     return () => {
@@ -322,7 +323,7 @@ export default function EventOverviewPage() {
             }
           />
           <Row label="DATE" value={new Date(event.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()} />
-          {event.time && <Row label="TIME" value={event.time.slice(0, 5)} />}
+          {event.time && <Row label="TIME" value={`${event.time.slice(0, 5)} (${event.timezone || 'Africa/Lagos'})`} />}
           <Row label="VENUE" value={event.venue} />
           {event.capacity && <Row label="CAPACITY" value={`${event.capacity} people`} />}
           <Row

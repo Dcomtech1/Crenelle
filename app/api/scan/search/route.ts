@@ -5,9 +5,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
  * GET /api/scan/search?token=<scannerToken>&q=<name>
  *
  * Manual name-search fallback for damaged or dead-battery QR codes.
- * Returns up to 10 matching guests for the event associated with the
- * scanner token, along with their invitation IDs so the usher can
- * trigger a normal admission flow.
+ * Returns up to 10 matching attendees for the event associated with the
+ * scanner token, along with their secure qr_tokens (sent under invitationId)
+ * so the usher can trigger a normal admission flow.
  *
  * Security: token validates the usher's permission to see this event's
  * guest list. No organiser login required (usher flow).
@@ -37,23 +37,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid or inactive scanner link' }, { status: 403 })
   }
 
-  // Fuzzy search: case-insensitive substring match on guest name
-  // Join through invitations so we only surface guests who have a QR code
-  const { data: guests } = await supabase
-    .from('guests')
-    .select('id, name, phone, invitation:invitations(id, party_size, seat_info, status)')
+  // Fuzzy search: case-insensitive substring match on attendee name
+  // Join through invitations so we only surface attendees who have an active invitation
+  const { data: attendees } = await supabase
+    .from('attendees')
+    .select('id, name, phone, invitations(id, party_size, seat_info, status, qr_token)')
     .eq('event_id', link.event_id)
     .ilike('name', `%${q}%`)
     .limit(10)
 
-  const results = (guests ?? [])
-    .map((g) => {
-      const inv = Array.isArray(g.invitation) ? g.invitation[0] : g.invitation
+  const results = (attendees ?? [])
+    .map((a) => {
+      const inv = Array.isArray(a.invitations) ? a.invitations[0] : a.invitations
       return {
-        guestId: g.id,
-        guestName: g.name,
-        phone: g.phone,
-        invitationId: inv?.id ?? null,
+        guestId: a.id,
+        guestName: a.name,
+        phone: a.phone,
+        // Map the secure qr_token to invitationId so the client sends it to POST /api/scan
+        invitationId: inv?.qr_token ?? null,
         partySize: inv?.party_size ?? 1,
         seatInfo: inv?.seat_info ?? null,
         invitationStatus: inv?.status ?? null,

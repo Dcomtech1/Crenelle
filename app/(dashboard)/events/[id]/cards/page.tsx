@@ -6,10 +6,10 @@ import { Printer, QrCode } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import QRCode from 'qrcode'
-import type { Guest, Invitation, Event } from '@/lib/types'
+import type { Attendee, Invitation, Event } from '@/lib/types'
 
 type CardData = {
-  guest: Guest
+  guest: Attendee
   invitation: Invitation
   qrDataUrl: string
 }
@@ -24,23 +24,23 @@ export default function CardsPage() {
     async function load() {
       const supabase = createClient()
 
-      const [{ data: ev }, { data: guests }] = await Promise.all([
+      const [{ data: ev }, { data: attendees }] = await Promise.all([
         supabase.from('events').select('*').eq('id', eventId).single(),
-        supabase.from('guests').select('*, invitation:invitations(*)').eq('event_id', eventId).order('name'),
+        supabase.from('attendees').select('*, invitations(*)').eq('event_id', eventId).order('name'),
       ])
 
       setEvent(ev)
 
       const cardList: CardData[] = []
-      for (const g of (guests ?? []) as any[]) {
-        const invitation = g.invitation?.[0]
+      for (const a of (attendees ?? []) as any[]) {
+        const invitation = a.invitations?.[0]
         if (!invitation) continue
-        const qrDataUrl = await QRCode.toDataURL(invitation.id, {
+        const qrDataUrl = await QRCode.toDataURL(invitation.qr_token, {
           width: 256,
           margin: 1,
           color: { dark: '#0A0A0A', light: '#F0EDE8' },
         })
-        cardList.push({ guest: g, invitation, qrDataUrl })
+        cardList.push({ guest: a, invitation, qrDataUrl })
       }
 
       setCards(cardList)

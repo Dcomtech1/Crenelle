@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import type { Event } from '@/lib/types'
 import { EventBannerInput } from '@/components/event-banner-input'
 import { getOptimizedBannerUrl } from '@/lib/images'
+import { EventStatusBadge } from './event-status-badge'
 
 export default function EventOverviewPage() {
   const { id } = useParams<{ id: string }>()
@@ -34,6 +35,7 @@ export default function EventOverviewPage() {
 
   // Registration counts for open events
   const [regCounts, setRegCounts] = useState({ pending: 0, accepted: 0, rejected: 0 })
+  const [canEdit, setCanEdit] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -43,6 +45,12 @@ export default function EventOverviewPage() {
       if (data) {
         setEvent(data)
         setEditEventType(data.event_type || 'closed')
+
+        // Resolve user to check if they are the owner
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user && data.organizer_id === user.id) {
+          setCanEdit(true)
+        }
       }
     }
 
@@ -329,12 +337,13 @@ export default function EventOverviewPage() {
           <Row
             label="STATUS"
             value={
-              <span
-                className={`inline-block px-4 py-1 font-display text-lg uppercase ${statusColors[event.status] ?? ''}`}
-                aria-label={`Status: ${event.status}`}
-              >
-                {event.status}
-              </span>
+              <EventStatusBadge
+                eventId={id}
+                eventName={event.name}
+                initialStatus={event.status}
+                canEdit={canEdit}
+                variant="overview"
+              />
             }
           />
           {event.description && <Row label="DESCRIPTION" value={event.description} />}

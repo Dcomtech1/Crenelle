@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { sendInvitationEmail } from '@/lib/email'
 import { validateEmailBlob } from '@/lib/validations/guest-import'
 
-export async function addGuest(eventId: string, formData: FormData) {
+export async function addAttendee(eventId: string, formData: FormData) {
   const supabase = await createClient()
 
   const name = formData.get('name') as string
@@ -13,29 +13,41 @@ export async function addGuest(eventId: string, formData: FormData) {
   const email = (formData.get('email') as string) || null
   const partySize = Number(formData.get('party_size')) || 1
   const seatInfo = (formData.get('seat_info') as string) || null
+  const ticketTierId = (formData.get('ticket_tier_id') as string) || null
 
-  // Insert guest
-  const { data: guest, error: guestError } = await supabase
-    .from('guests')
-    .insert({ event_id: eventId, name, phone, email })
+  // Insert attendee
+  const { data: attendee, error: attendeeError } = await supabase
+    .from('attendees')
+    .insert({
+      event_id: eventId,
+      name,
+      phone,
+      email,
+      source: 'manual',
+      registration_status: null
+    })
     .select()
     .single()
 
-  if (guestError) return { error: guestError.message }
+  if (attendeeError) return { error: attendeeError.message }
 
   // Create invitation (the QR code record)
   const { data: invitation, error: invError } = await supabase
     .from('invitations')
     .insert({
       event_id: eventId,
-      guest_id: guest.id,
+      attendee_id: attendee.id,
       party_size: partySize,
       seat_info: seatInfo,
+      status: 'pending',
+      ticket_tier_id: ticketTierId
     })
     .select()
     .single()
 
-  if (invError || !invitation) return { error: invError?.message || 'Failed to generate invitation' }
+  if (invError || !invitation) {
+    return { error: invError?.message || 'Failed to generate invitation' }
+  }
 
   // Automatically send the invitation email if email is provided
   if (email) {
@@ -64,7 +76,7 @@ export async function addGuest(eventId: string, formData: FormData) {
   return { success: true }
 }
 
-export async function addMultipleGuests(eventId: string, emailsText: string, partySize: number) {
+export async function addMultipleAttendees(eventId: string, emailsText: string, partySize: number) {
   const supabase = await createClient()
 
   // Validate and deduplicate using Zod-backed parser
@@ -77,7 +89,7 @@ export async function addMultipleGuests(eventId: string, emailsText: string, par
     return { error: `No valid email addresses found in the input.${hint}` }
   }
 
-  // Validate party size explicitly (defence-in-depth — client already enforces min/max)
+  // Validate party size explicitly
   const safePartySize = Math.max(1, Math.min(50, Math.floor(partySize) || 1))
 
   // Fetch event details to send invitation emails
@@ -90,29 +102,35 @@ export async function addMultipleGuests(eventId: string, emailsText: string, par
   let addedCount = 0
   const errors: string[] = []
 
-  // Report invalid entries upfront (before the loop)
+  // Report invalid entries upfront
   if (invalidEntries.length > 0) {
     errors.push(`Skipped ${invalidEntries.length} invalid entr${invalidEntries.length === 1 ? 'y' : 'ies'}: ${invalidEntries.slice(0, 3).join(', ')}${invalidEntries.length > 3 ? '…' : ''}`)
   }
 
   for (const email of uniqueEmails) {
     try {
-      // Create guest name from email prefix: e.g. john.doe@email.com -> "John Doe"
+      // Create attendee name from email prefix
       const prefix = email.split('@')[0]
       const name = prefix
         .split(/[-._+]+/)
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ') || 'Guest'
 
-      // Insert guest
-      const { data: guest, error: guestError } = await supabase
-        .from('guests')
-        .insert({ event_id: eventId, name, email })
+      // Insert attendee
+      const { data: attendee, error: attendeeError } = await supabase
+        .from('attendees')
+        .insert({
+          event_id: eventId,
+          name,
+          email,
+          source: 'imported',
+          registration_status: null
+        })
         .select()
         .single()
 
-      if (guestError) {
-        errors.push(`${email}: ${guestError.message}`)
+      if (attendeeError) {
+        errors.push(`${email}: ${attendeeError.message}`)
         continue
       }
 
@@ -121,8 +139,9 @@ export async function addMultipleGuests(eventId: string, emailsText: string, par
         .from('invitations')
         .insert({
           event_id: eventId,
-          guest_id: guest.id,
+          attendee_id: attendee.id,
           party_size: safePartySize,
+          status: 'pending'
         })
         .select()
         .single()
@@ -134,7 +153,7 @@ export async function addMultipleGuests(eventId: string, emailsText: string, par
 
       addedCount++
 
-      // Send email invitation asynchronously (non-blocking so bulk insert doesn't timeout)
+      // Send email invitation asynchronously
       if (event) {
         sendInvitationEmail({
           eventId,
@@ -146,7 +165,7 @@ export async function addMultipleGuests(eventId: string, emailsText: string, par
           console.error(`Failed to send bulk invitation to ${email}:`, err)
         })
 
-        // Throttle slightly to respect Resend's free tier rate limits safely
+        // Throttle slightly
         await new Promise(resolve => setTimeout(resolve, 100))
       }
     } catch (e: any) {
@@ -168,37 +187,45 @@ export async function addMultipleGuests(eventId: string, emailsText: string, par
   }
 }
 
-export async function updateGuest(guestId: string, eventId: string, formData: FormData) {
+export async function updateAttendee(attendeeId: string, eventId: string, formData: FormData) {
   const supabase = await createClient()
 
+  const name = formData.get('name') as string
+  const phone = (formData.get('phone') as string) || null
+  const email = (formData.get('email') as string) || null
+
   const { error } = await supabase
-    .from('guests')
-    .update({
-      name: formData.get('name') as string,
-      phone: (formData.get('phone') as string) || null,
-      email: (formData.get('email') as string) || null,
-    })
-    .eq('id', guestId)
+    .from('attendees')
+    .update({ name, phone, email })
+    .eq('id', attendeeId)
 
   if (error) return { error: error.message }
 
   // Update invitation
   const partySize = Number(formData.get('party_size')) || 1
   const seatInfo = (formData.get('seat_info') as string) || null
+  const ticketTierId = (formData.get('ticket_tier_id') as string) || null
 
   await supabase
     .from('invitations')
-    .update({ party_size: partySize, seat_info: seatInfo })
-    .eq('guest_id', guestId)
+    .update({
+      party_size: partySize,
+      seat_info: seatInfo,
+      ticket_tier_id: ticketTierId
+    })
+    .eq('attendee_id', attendeeId)
 
   revalidatePath(`/events/${eventId}/guests`)
   return { success: true }
 }
 
-export async function deleteGuest(guestId: string, eventId: string) {
+export async function cancelAttendeeInvitation(attendeeId: string, eventId: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase.from('guests').delete().eq('id', guestId)
+  const { error } = await supabase
+    .from('invitations')
+    .update({ status: 'cancelled' })
+    .eq('attendee_id', attendeeId)
 
   if (error) return { error: error.message }
 

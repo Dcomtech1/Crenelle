@@ -12,7 +12,17 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
 import { toast } from 'sonner'
-import type { Registration, Event } from '@/lib/types'
+import type { Event } from '@/lib/types'
+
+interface Registration {
+  id: string
+  event_id: string
+  full_name: string
+  email: string
+  phone: string | null
+  status: 'pending' | 'accepted' | 'rejected' | 'waitlist'
+  created_at: string
+}
 
 export default function RegistrationsPage() {
   const { id: eventId } = useParams<{ id: string }>()
@@ -29,11 +39,12 @@ export default function RegistrationsPage() {
 
   async function loadData() {
     const supabase = createClient()
-    const [{ data: regs }, { data: ev }] = await Promise.all([
+    const [{ data: attendees }, { data: ev }] = await Promise.all([
       supabase
-        .from('registrations')
+        .from('attendees')
         .select('*')
         .eq('event_id', eventId)
+        .eq('source', 'public_registration')
         .order('created_at', { ascending: true }),
       supabase
         .from('events')
@@ -41,7 +52,18 @@ export default function RegistrationsPage() {
         .eq('id', eventId)
         .single(),
     ])
-    setRegistrations((regs as Registration[]) ?? [])
+
+    const mappedRegs = (attendees ?? []).map((a: any) => ({
+      id: a.id,
+      event_id: a.event_id,
+      full_name: a.name,
+      email: a.email,
+      phone: a.phone,
+      status: a.registration_status,
+      created_at: a.created_at,
+    }))
+
+    setRegistrations(mappedRegs as any[])
     setEvent(ev)
   }
 
@@ -53,7 +75,7 @@ export default function RegistrationsPage() {
     const supabase = createClient()
     const channel = supabase
       .channel(`registrations-${eventId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations', filter: `event_id=eq.${eventId}` }, () => loadData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendees', filter: `event_id=eq.${eventId}` }, () => loadData())
       .subscribe()
 
     return () => {

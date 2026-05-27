@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import { useParams } from 'next/navigation'
 import { Plus, Pencil, X, Users, Lock } from 'lucide-react'
-import { addGuest, updateGuest, deleteGuest, addMultipleGuests } from '@/app/actions/guests'
+import { addAttendee, updateAttendee, cancelAttendeeInvitation, addMultipleAttendees } from '@/app/actions/attendees'
 import { createClient } from '@/lib/supabase/client'
 import { fieldCls, labelCls, hintCls } from '@/lib/form-styles'
 import { Button } from '@/components/ui/button'
@@ -13,9 +13,9 @@ import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import type { Invitation, Guest } from '@/lib/types'
+import type { Invitation, Attendee } from '@/lib/types'
 
-type GuestWithInvitation = Guest & { invitation: Invitation | null }
+type GuestWithInvitation = Attendee & { invitation: Invitation | null }
 
 export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   const { id: eventId } = useParams<{ id: string }>()
@@ -29,11 +29,12 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   async function loadGuests() {
     const supabase = createClient()
     const { data } = await supabase
-      .from('guests')
-      .select('*, invitation:invitations(*)')
+      .from('attendees')
+      .select('*, invitations(*)')
       .eq('event_id', eventId)
+      .in('source', ['imported', 'manual'])
       .order('created_at', { ascending: true })
-    setGuests((data as any[])?.map(g => ({ ...g, invitation: g.invitation?.[0] ?? null })) ?? [])
+    setGuests((data as any[])?.map(g => ({ ...g, invitation: g.invitations?.[0] ?? null })) ?? [])
   }
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
 
     const channel = supabase
       .channel(`guests-${eventId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests',      filter: `event_id=eq.${eventId}` }, () => loadGuests())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendees',   filter: `event_id=eq.${eventId}` }, () => loadGuests())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'invitations', filter: `event_id=eq.${eventId}` }, () => loadGuests())
       .subscribe()
 
@@ -57,7 +58,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
 
   async function handleAdd(formData: FormData) {
     startTransition(async () => {
-      const result = await addGuest(eventId, formData)
+      const result = await addAttendee(eventId, formData)
       if (result?.error) toast.error(result.error)
       else { toast.success('Guest added'); setAddOpen(false); loadGuests() }
     })
@@ -65,7 +66,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
 
   async function handleBulkAdd(emailsText: string, partySize: number) {
     startTransition(async () => {
-      const result = await addMultipleGuests(eventId, emailsText, partySize)
+      const result = await addMultipleAttendees(eventId, emailsText, partySize)
       if (result?.error) toast.error(result.error)
       else {
         if (result?.warning) {
@@ -82,7 +83,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   async function handleUpdate(formData: FormData) {
     if (!editGuest) return
     startTransition(async () => {
-      const result = await updateGuest(editGuest.id, eventId, formData)
+      const result = await updateAttendee(editGuest.id, eventId, formData)
       if (result?.error) toast.error(result.error)
       else { toast.success('Guest updated'); setEditGuest(null); loadGuests() }
     })
@@ -237,19 +238,19 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
           <ConfirmDialog
             open={!!deleteTarget}
             onOpenChange={(open) => !open && setDeleteTarget(null)}
-            title="REMOVE_GUEST"
+            title="CANCEL_INVITATION"
             description="THIS_ACTION_IS_IRREVERSIBLE"
             subject={deleteTarget?.name}
             subjectLabel="TARGET_GUEST"
-            body="Removing this guest will delete their invitation and QR code. This cannot be undone."
-            confirmLabel="REMOVE_GUEST"
+            body="Cancelling this guest's invitation will invalidate their QR code entry pass. This cannot be undone."
+            confirmLabel="CANCEL_INVITATION"
             isPending={isDeleting}
             onConfirm={() => {
               if (!deleteTarget) return
               startDeleteTransition(async () => {
-                const result = await deleteGuest(deleteTarget.id, eventId)
+                const result = await cancelAttendeeInvitation(deleteTarget.id, eventId)
                 if (result?.error) toast.error(result.error)
-                else { toast.success('Guest removed'); loadGuests(); setDeleteTarget(null) }
+                else { toast.success('Invitation cancelled'); loadGuests(); setDeleteTarget(null) }
               })
             }}
           />

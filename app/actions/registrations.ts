@@ -15,7 +15,6 @@ export async function submitRegistration(eventId: string, formData: FormData) {
   const supabase = createAdminClient()
 
   // ── Rate limiting (CAN-SPAM / anti-spam) ──────────────────────
-  // Derive a best-effort IP from forwarded headers.
   const headerStore = await headers()
   const ip =
     headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() ??
@@ -24,18 +23,15 @@ export async function submitRegistration(eventId: string, formData: FormData) {
 
   const email = (formData.get('email') as string)?.trim().toLowerCase() ?? ''
 
-  // 10 attempts per IP per 15 minutes
   const ipLimit = checkRateLimit({ key: `reg_ip:${ip}`, limit: 10, windowMs: 15 * 60 * 1000 })
   if (!ipLimit.allowed) {
     return { error: 'Too many registration attempts from your network. Please try again later.' }
   }
 
-  // 3 attempts per email per hour (catches email enumeration)
   const emailLimit = checkRateLimit({ key: `reg_email:${email}`, limit: 3, windowMs: 60 * 60 * 1000 })
   if (!emailLimit.allowed) {
     return { error: 'Too many registrations for this email address. Please wait before trying again.' }
   }
-
 
   // 1. Verify the event exists, is open, and is published
   const { data: event, error: eventError } = await supabase
@@ -53,17 +49,18 @@ export async function submitRegistration(eventId: string, formData: FormData) {
   let routeToWaitlist = false
   if (event.max_registrations) {
     const { count } = await supabase
-      .from('registrations')
+      .from('attendees')
       .select('*', { count: 'exact', head: true })
       .eq('event_id', eventId)
-      .not('status', 'in', '(rejected,waitlist)')
+      .eq('source', 'public_registration')
+      .not('registration_status', 'in', '(rejected,waitlist)')
 
     if ((count ?? 0) >= event.max_registrations) {
       routeToWaitlist = true
     }
   }
 
-  // 3. Check unsubscribe list — don't accept registrations from opted-out emails
+  // 3. Check unsubscribe list
   const { data: unsub } = await supabase
     .from('email_unsubscribes')
     .select('id')
@@ -72,24 +69,26 @@ export async function submitRegistration(eventId: string, formData: FormData) {
     .maybeSingle()
 
   if (unsub) {
-    // Silent success — don't leak which emails are on the list
     return { success: true }
   }
 
-  // 4. Insert registration (pending or waitlist)
-  const fullName = (formData.get('full_name') as string)?.trim()
+  // 4. Insert attendee with source = 'public_registration'
+  const name = (formData.get('full_name') as string)?.trim()
   const phone = (formData.get('phone') as string)?.trim() || null
+  const ticketTierId = (formData.get('ticket_tier_id') as string) || null
 
-  if (!email || !fullName) return { error: 'Name and email are required' }
+  if (!email || !name) return { error: 'Name and email are required' }
 
   const { error: insertError } = await supabase
-    .from('registrations')
+    .from('attendees')
     .insert({
       event_id: eventId,
-      full_name: fullName,
+      name,
       email,
       phone,
-      status: routeToWaitlist ? 'waitlist' : 'pending',
+      source: 'public_registration',
+      registration_status: routeToWaitlist ? 'waitlist' : 'pending',
+      ticket_tier_id: ticketTierId,
     })
 
   if (insertError) {
@@ -99,15 +98,16 @@ export async function submitRegistration(eventId: string, formData: FormData) {
     // DB trigger fired — cap was hit between our check and the insert
     if (insertError.code === 'P0001' && insertError.message?.includes('REGISTRATION_CAP_REACHED')) {
       routeToWaitlist = true
-      // Re-insert as waitlist
       const { error: waitlistError } = await supabase
-        .from('registrations')
+        .from('attendees')
         .insert({
           event_id: eventId,
-          full_name: fullName,
+          name,
           email,
           phone,
-          status: 'waitlist',
+          source: 'public_registration',
+          registration_status: 'waitlist',
+          ticket_tier_id: ticketTierId,
         })
       if (waitlistError) return { error: waitlistError.message }
     } else {
@@ -119,59 +119,48 @@ export async function submitRegistration(eventId: string, formData: FormData) {
 }
 
 /**
- * Accept a registration — creates a guest + invitation (party_size = 1),
+ * Accept a registration — marks the attendee as accepted, creates an active invitation,
  * and triggers the invitation email with QR code.
  */
-export async function acceptRegistration(registrationId: string, eventId: string) {
+export async function acceptRegistration(attendeeId: string, eventId: string, selectedTierId?: string | null) {
   const supabase = await createClient()
-  const admin = createAdminClient()
 
-  // 1. Get the registration
-  const { data: reg, error: regError } = await supabase
-    .from('registrations')
+  // 1. Get the attendee
+  const { data: attendee, error: attendeeError } = await supabase
+    .from('attendees')
     .select('*')
-    .eq('id', registrationId)
+    .eq('id', attendeeId)
     .single()
 
-  if (regError || !reg) return { error: 'Registration not found' }
-  if (reg.status === 'accepted') return { error: 'Already accepted' }
+  if (attendeeError || !attendee) return { error: 'Registrant not found' }
+  if (attendee.registration_status === 'accepted') return { error: 'Already accepted' }
 
-  // 2. Update status to accepted
+  // 2. Mark the attendee as accepted
   const { error: updateError } = await supabase
-    .from('registrations')
-    .update({ status: 'accepted' })
-    .eq('id', registrationId)
+    .from('attendees')
+    .update({ registration_status: 'accepted' })
+    .eq('id', attendeeId)
 
   if (updateError) return { error: updateError.message }
 
-  // 3. Create guest record
-  const { data: guest, error: guestError } = await supabase
-    .from('guests')
-    .insert({
-      event_id: eventId,
-      name: reg.full_name,
-      phone: reg.phone,
-      email: reg.email,
-    })
-    .select()
-    .single()
+  // 3. Create invitation for accepted attendee (party_size = 1 for open events)
+  const tierIdToUse = selectedTierId !== undefined ? selectedTierId : attendee.ticket_tier_id
 
-  if (guestError) return { error: guestError.message }
-
-  // 4. Create invitation (party_size = 1 for open events)
   const { data: invitation, error: invError } = await supabase
     .from('invitations')
     .insert({
       event_id: eventId,
-      guest_id: guest.id,
+      attendee_id: attendeeId,
       party_size: 1,
+      status: 'active',
+      ticket_tier_id: tierIdToUse ?? null,
     })
     .select()
     .single()
 
   if (invError) return { error: invError.message }
 
-  // 5. Get event details for the email
+  // 4. Get event details for the email
   const { data: event } = await supabase
     .from('events')
     .select('name, date, time, venue, description, banner_url')
@@ -180,18 +169,19 @@ export async function acceptRegistration(registrationId: string, eventId: string
 
   if (!event) return { error: 'Event not found' }
 
-  // 6. Trigger invitation email directly
-  try {
-    await sendInvitationEmail({
-      eventId,
-      recipientEmail: reg.email,
-      recipientName: reg.full_name,
-      invitationId: invitation.id,
-      event,
-    })
-  } catch (e) {
-    // Email failure shouldn't block the acceptance
-    console.error('Failed to send invitation email:', e)
+  // 5. Trigger invitation email
+  if (attendee.email) {
+    try {
+      await sendInvitationEmail({
+        eventId,
+        recipientEmail: attendee.email,
+        recipientName: attendee.name,
+        invitationId: invitation.id,
+        event,
+      })
+    } catch (e) {
+      console.error('Failed to send invitation email:', e)
+    }
   }
 
   revalidatePath(`/events/${eventId}/registrations`)
@@ -202,13 +192,13 @@ export async function acceptRegistration(registrationId: string, eventId: string
 /**
  * Reject a registration — and auto-promote the next waitlisted person if one exists.
  */
-export async function rejectRegistration(registrationId: string, eventId: string) {
+export async function rejectRegistration(attendeeId: string, eventId: string) {
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('registrations')
-    .update({ status: 'rejected' })
-    .eq('id', registrationId)
+    .from('attendees')
+    .update({ registration_status: 'rejected' })
+    .eq('id', attendeeId)
 
   if (error) return { error: error.message }
 
@@ -221,18 +211,19 @@ export async function rejectRegistration(registrationId: string, eventId: string
 
   if (event?.max_registrations) {
     const { data: next } = await supabase
-      .from('registrations')
+      .from('attendees')
       .select('id')
       .eq('event_id', eventId)
-      .eq('status', 'waitlist')
+      .eq('source', 'public_registration')
+      .eq('registration_status', 'waitlist')
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
 
     if (next) {
       await supabase
-        .from('registrations')
-        .update({ status: 'pending' })
+        .from('attendees')
+        .update({ registration_status: 'pending' })
         .eq('id', next.id)
     }
   }
@@ -244,7 +235,7 @@ export async function rejectRegistration(registrationId: string, eventId: string
 /**
  * Manually promote a waitlisted registration to pending for organiser review.
  */
-export async function promoteFromWaitlist(registrationId: string, eventId: string) {
+export async function promoteFromWaitlist(attendeeId: string, eventId: string) {
   const supabase = await createClient()
 
   // Verify there is capacity before promoting
@@ -256,10 +247,11 @@ export async function promoteFromWaitlist(registrationId: string, eventId: strin
 
   if (event?.max_registrations) {
     const { count } = await supabase
-      .from('registrations')
+      .from('attendees')
       .select('*', { count: 'exact', head: true })
       .eq('event_id', eventId)
-      .not('status', 'in', '(rejected,waitlist)')
+      .eq('source', 'public_registration')
+      .not('registration_status', 'in', '(rejected,waitlist)')
 
     if ((count ?? 0) >= event.max_registrations) {
       return { error: 'No capacity available — reject or accept another registration first.' }
@@ -267,10 +259,10 @@ export async function promoteFromWaitlist(registrationId: string, eventId: strin
   }
 
   const { error } = await supabase
-    .from('registrations')
-    .update({ status: 'pending' })
-    .eq('id', registrationId)
-    .eq('status', 'waitlist') // safety: only promote if still waitlisted
+    .from('attendees')
+    .update({ registration_status: 'pending' })
+    .eq('id', attendeeId)
+    .eq('registration_status', 'waitlist') // safety guard
 
   if (error) return { error: error.message }
 
@@ -293,23 +285,22 @@ export async function sendReminderEmails(eventId: string, customMessage: string)
 
   if (!event) return { error: 'Event not found' }
 
-  // Get all non-cancelled invitations with guest details (event-type agnostic)
+  // Get all non-cancelled invitations with attendee details
   const { data: invitations } = await supabase
     .from('invitations')
-    .select('id, status, guest:guests(email, name)')
+    .select('id, status, attendee:attendees(email, name)')
     .eq('event_id', eventId)
     .neq('status', 'cancelled')
 
   const recipients = ((invitations ?? []) as any[])
     .map(inv => {
-      const guest = Array.isArray(inv.guest) ? inv.guest[0] : inv.guest
-      return { email: guest?.email, name: guest?.name, invitationId: inv.id }
+      const attendee = Array.isArray(inv.attendee) ? inv.attendee[0] : inv.attendee
+      return { email: attendee?.email, name: attendee?.name, invitationId: inv.id }
     })
     .filter(r => r.email)
 
   if (recipients.length === 0) return { error: 'No confirmed guests with emails to send to' }
 
-  // Send directly
   try {
     const res = await sendReminderEmailsDirect({
       eventId,
@@ -320,12 +311,10 @@ export async function sendReminderEmails(eventId: string, customMessage: string)
 
     revalidatePath(`/events/${eventId}`)
 
-    // All recipients were on the unsubscribe list — inform without erroring
     if (res.sent === 0 && (res as any).skipped > 0 && !res.errors?.length) {
       return { error: 'No emails sent — all guests have unsubscribed from emails.' }
     }
 
-    // All sends failed
     if (res.sent === 0 && res.errors?.length) {
       return { error: `Failed to send reminders: ${res.errors.join(', ')}` }
     }

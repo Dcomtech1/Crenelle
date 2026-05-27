@@ -168,8 +168,6 @@ export async function sendInvitationEmail({
   const supabase = createAdminClient()
 
   // Check unsubscribe list before sending.
-  // A row existing just means we've pre-seeded a token; only treat as opted-out
-  // when unsubscribed_at is actually set (i.e. the guest clicked the link).
   const { data: unsub } = await supabase
     .from('email_unsubscribes')
     .select('id')
@@ -182,14 +180,32 @@ export async function sendInvitationEmail({
     return { success: true, skipped: true }
   }
 
+  // Fetch invitation with attendee and ticket_tier
+  const { data: invitation, error: invFetchError } = await supabase
+    .from('invitations')
+    .select('*, attendee:attendees(name, email), ticket_tier:ticket_tiers(id, name, price)')
+    .eq('id', invitationId)
+    .single()
+
+  if (invFetchError || !invitation) {
+    console.error('[email] Failed to fetch invitation for email:', invFetchError)
+    return { error: 'Failed to fetch invitation details' }
+  }
+
+  const actualRecipientName = invitation.attendee?.name || recipientName
+  const actualRecipientEmail = invitation.attendee?.email || recipientEmail
+  const qrToken = invitation.qr_token
+  const partySize = invitation.party_size || 1
+  const partySizeText = partySize === 1 ? '1 PERSON' : `${partySize} PEOPLE`
+
   // Resolve organiser identity for From header and Reply-To
   const organizer = await fetchOrganizerForEvent(eventId)
 
   // Generate unsubscribe URL for this recipient
-  const unsubscribeUrl = await getUnsubscribeUrl(recipientEmail)
+  const unsubscribeUrl = await getUnsubscribeUrl(actualRecipientEmail)
 
-  // Generate QR code URL using a hosted API (robust for emails)
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${invitationId}&color=0A0A0A&bgcolor=F0EDE8`;
+  // Generate QR code URL using a hosted API (robust for emails), encoding qr_token
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${qrToken}&color=0A0A0A&bgcolor=F0EDE8`;
 
   const eventDate = new Date(event.date).toLocaleDateString('en-GB', {
     weekday: 'long',
@@ -197,6 +213,29 @@ export async function sendInvitationEmail({
     month: 'long',
     year: 'numeric',
   })
+
+  // Fetch tier perks if assigned
+  let tierHtml = ''
+  if (invitation.ticket_tier_id && invitation.ticket_tier) {
+    const { data: perks } = await supabase
+      .from('tier_perks')
+      .select('label')
+      .eq('tier_id', invitation.ticket_tier_id)
+      .order('sort_order', { ascending: true })
+
+    const perksText = perks && perks.length > 0
+      ? `<div style="margin-top:4px;font-size:11px;color:#9E9890;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">PERKS: ${perks.map(p => p.label).join(' · ')}</div>`
+      : ''
+
+    tierHtml = `
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;width:120px;font-weight:600;">TICKET TIER</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+              ${invitation.ticket_tier.name}
+              ${perksText}
+            </td>
+          </tr>`
+  }
 
   const html = `
 <!DOCTYPE html>
@@ -305,12 +344,13 @@ export async function sendInvitationEmail({
           </tr>
           <tr>
             <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">GUEST</td>
-            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${recipientName}</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${actualRecipientName}</td>
           </tr>
           <tr>
             <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">ADMITS</td>
-            <td class="text-accent" style="padding:10px 0;font-size:15px;color:#BF8430;font-weight:bold;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">1 PERSON</td>
+            <td class="text-accent" style="padding:10px 0;font-size:15px;color:#BF8430;font-weight:bold;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${partySizeText}</td>
           </tr>
+          ${tierHtml}
         </table>
       </div>
 
@@ -351,7 +391,7 @@ export async function sendInvitationEmail({
     const { error: sendError } = await getResend().emails.send({
       from: `${organizer.name} <${SENDING_ADDRESS}>`,
       ...(organizer.email ? { replyTo: organizer.email } : {}),
-      to: recipientEmail,
+      to: actualRecipientEmail,
       subject: `You're confirmed — ${event.name}`,
       html,
     })
@@ -364,7 +404,7 @@ export async function sendInvitationEmail({
     // Log the email
     await supabase.from('email_logs').insert({
       event_id: eventId,
-      recipient_email: recipientEmail,
+      recipient_email: actualRecipientEmail,
       email_type: 'invitation',
       subject: `You're confirmed — ${event.name}`,
     })
@@ -387,12 +427,10 @@ export async function sendReminderEmailsDirect({
 }: ReminderEmailsOptions) {
   const supabase = createAdminClient()
 
-  // Resolve organiser identity once — shared across all recipients in this batch
+  // Resolve organiser identity once
   const organizer = await fetchOrganizerForEvent(eventId)
 
-  // Filter out unsubscribed recipients before we even start.
-  // Only treat as opted-out when unsubscribed_at is set — a row with no
-  // unsubscribed_at is just a pre-seeded token, NOT an opt-out.
+  // Filter out unsubscribed recipients
   const { data: unsubList } = await supabase
     .from('email_unsubscribes')
     .select('email')
@@ -417,8 +455,42 @@ export async function sendReminderEmailsDirect({
   for (const recipient of filteredRecipients) {
     // Generate per-recipient unsubscribe URL
     const unsubscribeUrl = await getUnsubscribeUrl(recipient.email)
-    // Generate QR code URL using a hosted API (robust for emails)
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${recipient.invitationId}&color=0A0A0A&bgcolor=F0EDE8`;
+
+    // Fetch invitation details to get qr_token, party_size, ticket_tier
+    const { data: invitation } = await supabase
+      .from('invitations')
+      .select('*, attendee:attendees(name, email), ticket_tier:ticket_tiers(id, name, price)')
+      .eq('id', recipient.invitationId)
+      .single()
+
+    const qrToken = invitation?.qr_token || recipient.invitationId
+    const partySize = invitation?.party_size || 1
+    const partySizeText = partySize === 1 ? '1 PERSON' : `${partySize} PEOPLE`
+
+    // Generate QR code URL using a hosted API (robust for emails), encoding qr_token
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${qrToken}&color=0A0A0A&bgcolor=F0EDE8`;
+
+    let tierHtml = ''
+    if (invitation?.ticket_tier_id && invitation?.ticket_tier) {
+      const { data: perks } = await supabase
+        .from('tier_perks')
+        .select('label')
+        .eq('tier_id', invitation.ticket_tier_id)
+        .order('sort_order', { ascending: true })
+
+      const perksText = perks && perks.length > 0
+        ? `<div style="margin-top:4px;font-size:11px;color:#9E9890;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">PERKS: ${perks.map(p => p.label).join(' · ')}</div>`
+        : ''
+
+      tierHtml = `
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;width:120px;font-weight:600;">TICKET TIER</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+              ${invitation.ticket_tier.name}
+              ${perksText}
+            </td>
+          </tr>`
+    }
 
     const html = `
 <!DOCTYPE html>
@@ -536,6 +608,11 @@ export async function sendReminderEmailsDirect({
             <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">VENUE</td>
             <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${event.venue}</td>
           </tr>
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">ADMITS</td>
+            <td class="text-accent" style="padding:10px 0;font-size:15px;color:#BF8430;font-weight:bold;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${partySizeText}</td>
+          </tr>
+          ${tierHtml}
         </table>
       </div>
 

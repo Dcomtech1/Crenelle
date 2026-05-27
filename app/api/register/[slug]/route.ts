@@ -31,10 +31,11 @@ export async function GET(
 
   // Count current non-rejected registrations
   const { count } = await supabase
-    .from('registrations')
+    .from('attendees')
     .select('*', { count: 'exact', head: true })
     .eq('event_id', event.id)
-    .neq('status', 'rejected')
+    .eq('source', 'public_registration')
+    .neq('registration_status', 'rejected')
 
   return NextResponse.json({
     id: event.id,

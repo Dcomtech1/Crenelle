@@ -6,7 +6,7 @@ import { Users, UserCheck, Clock, BarChart3, DoorOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { StatCard } from '@/components/stat-card'
 import { SectionHeader } from '@/components/section-header'
-import type { EntryLog, Invitation, Guest } from '@/lib/types'
+import type { EntryLog, Invitation, Attendee } from '@/lib/types'
 
 type EntryWithGuest = {
   id: string
@@ -18,20 +18,16 @@ type EntryWithGuest = {
   }
 }
 
-type GuestName = Pick<Guest, 'name'>
+type GuestName = { name: string }
 
 type InvitationRaw = Pick<Invitation, 'id' | 'party_size' | 'seat_info' | 'status'> & {
-  guest: GuestName | GuestName[]
+  guest: GuestName
 }
 
 type EntryLogRaw = Pick<EntryLog, 'id' | 'scanned_at'> & {
-  invitation:
-    | (Pick<Invitation, 'id' | 'party_size' | 'seat_info'> & {
-        guest: GuestName | GuestName[]
-      })
-    | (Pick<Invitation, 'id' | 'party_size' | 'seat_info'> & {
-        guest: GuestName | GuestName[]
-      })[]
+  invitation: Pick<Invitation, 'id' | 'party_size' | 'seat_info'> & {
+    attendee: GuestName | GuestName[]
+  }
 }
 
 export default function LiveDashboardPage() {
@@ -50,17 +46,28 @@ export default function LiveDashboardPage() {
     async function loadData() {
       const { data: invitations } = await supabase
         .from('invitations')
-        .select('id, party_size, seat_info, status, guest:guests(name)')
+        .select('id, party_size, seat_info, status, attendee:attendees(name)')
         .eq('event_id', eventId)
 
       const { data: logs } = await supabase
         .from('entry_logs')
-        .select('id, scanned_at, invitation:invitations(id, party_size, seat_info, guest:guests(name))')
+        .select('id, scanned_at, invitation:invitations(id, party_size, seat_info, attendee:attendees(name))')
         .in('invitation_id', (invitations ?? []).map(i => i.id))
         .order('scanned_at', { ascending: false })
 
-      const logsArr = (logs ?? []) as EntryLogRaw[]
-      const invArr  = (invitations ?? []) as InvitationRaw[]
+      const logsArr = (logs ?? []) as any[]
+      const invArrRaw = (invitations ?? []) as any[]
+
+      const invArr: InvitationRaw[] = invArrRaw.map(i => {
+        const att = Array.isArray(i.attendee) ? i.attendee[0] : i.attendee
+        return {
+          id: i.id,
+          party_size: i.party_size,
+          seat_info: i.seat_info,
+          status: i.status,
+          guest: att ? { name: att.name } : { name: 'Unknown' }
+        }
+      })
 
       const logsPerInv = new Map<string, number>()
       logsArr.forEach((l) => {
@@ -75,14 +82,14 @@ export default function LiveDashboardPage() {
       setArrivedSeats(logsPerInv.size)
       setEntries(logsArr.map(l => {
         const invRaw = Array.isArray(l.invitation) ? l.invitation[0] : l.invitation
-        const guestRaw = invRaw ? (Array.isArray(invRaw.guest) ? invRaw.guest[0] : invRaw.guest) : null
+        const attRaw = invRaw ? (Array.isArray(invRaw.attendee) ? invRaw.attendee[0] : invRaw.attendee) : null
         return {
           id: l.id,
           scanned_at: l.scanned_at,
           invitation: {
             party_size: invRaw?.party_size ?? 1,
             seat_info:  invRaw?.seat_info ?? null,
-            guest:      guestRaw ?? { name: 'Unknown' }
+            guest:      attRaw ?? { name: 'Unknown' }
           }
         }
       }))
@@ -95,9 +102,8 @@ export default function LiveDashboardPage() {
           })
           .filter((i) => i.remainingInParty > 0)
           .map((i) => {
-            const guestRaw = Array.isArray(i.guest) ? i.guest[0] : i.guest
             return {
-              name:       guestRaw?.name ?? 'Unknown',
+              name:       i.guest?.name ?? 'Unknown',
               party_size: i.remainingInParty,
               seat_info:  i.seat_info
             }

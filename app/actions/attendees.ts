@@ -50,6 +50,7 @@ export async function addAttendee(eventId: string, formData: FormData) {
   }
 
   // Automatically send the invitation email if email is provided
+  let emailWarning: string | undefined = undefined
   if (email) {
     const { data: event } = await supabase
       .from('events')
@@ -59,20 +60,33 @@ export async function addAttendee(eventId: string, formData: FormData) {
 
     if (event) {
       try {
-        await sendInvitationEmail({
+        const emailResult = await sendInvitationEmail({
           eventId,
           recipientEmail: email,
           recipientName: name,
           invitationId: invitation.id,
           event,
         })
-      } catch (e) {
+        if (emailResult && 'error' in emailResult && emailResult.error) {
+          console.error('Failed to send automated invitation email:', emailResult.error)
+          emailWarning = emailResult.error
+        }
+      } catch (e: any) {
         console.error('Failed to send automated invitation email:', e)
+        emailWarning = e.message || 'Unknown email dispatch error'
       }
     }
   }
 
   revalidatePath(`/events/${eventId}/guests`)
+
+  if (emailWarning) {
+    return {
+      success: true,
+      warning: `Guest added, but the invitation email failed to send: ${emailWarning}. If you are in sandbox mode, you can only send emails to your own registered email address.`,
+    }
+  }
+
   return { success: true }
 }
 

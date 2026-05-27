@@ -75,8 +75,17 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   async function handleAdd(formData: FormData) {
     startTransition(async () => {
       const result = await addAttendee(eventId, formData)
-      if (result?.error) toast.error(result.error)
-      else { toast.success('Guest added'); setAddOpen(false); loadGuests() }
+      if (result?.error) {
+        toast.error(result.error)
+      } else if (result?.warning) {
+        toast.warning(result.warning, { duration: 6000 })
+        setAddOpen(false)
+        loadGuests()
+      } else {
+        toast.success('Guest added')
+        setAddOpen(false)
+        loadGuests()
+      }
     })
   }
 

@@ -98,8 +98,13 @@ export default function RegistrationsPage() {
     if (!acceptTarget) return
     startTransition(async () => {
       const result = await acceptRegistration(acceptTarget.id, eventId)
-      if (result?.error) toast.error(result.error)
-      else toast.success(`${acceptTarget.full_name} accepted — invitation email sent`)
+      if (result?.error) {
+        toast.error(result.error)
+      } else if (result?.warning) {
+        toast.warning(result.warning, { duration: 6000 })
+      } else {
+        toast.success(`${acceptTarget.full_name} accepted — invitation email sent`)
+      }
       setAcceptTarget(null)
       loadData()
     })

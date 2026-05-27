@@ -170,22 +170,36 @@ export async function acceptRegistration(attendeeId: string, eventId: string, se
   if (!event) return { error: 'Event not found' }
 
   // 5. Trigger invitation email
+  let emailWarning: string | undefined = undefined
   if (attendee.email) {
     try {
-      await sendInvitationEmail({
+      const emailResult = await sendInvitationEmail({
         eventId,
         recipientEmail: attendee.email,
         recipientName: attendee.name,
         invitationId: invitation.id,
         event,
       })
-    } catch (e) {
+      if (emailResult && 'error' in emailResult && emailResult.error) {
+        console.error('Failed to send invitation email:', emailResult.error)
+        emailWarning = emailResult.error
+      }
+    } catch (e: any) {
       console.error('Failed to send invitation email:', e)
+      emailWarning = e.message || 'Unknown email dispatch error'
     }
   }
 
   revalidatePath(`/events/${eventId}/registrations`)
   revalidatePath(`/events/${eventId}/guests`)
+
+  if (emailWarning) {
+    return {
+      success: true,
+      warning: `Registrant accepted, but the invitation email failed to send: ${emailWarning}. If you are in sandbox mode, you can only send emails to your own registered email address.`,
+    }
+  }
+
   return { success: true }
 }
 

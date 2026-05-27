@@ -31,7 +31,7 @@ export default function RegistrationsPage() {
   const [event, setEvent] = useState<Event | null>(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected' | 'waitlist'>('all')
   const [search, setSearch] = useState('')
-  const [isPending, startTransition] = useTransition()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [reminderOpen, setReminderOpen] = useState(false)
   const [reminderMessage, setReminderMessage] = useState('')
   const [sendingReminder, setSendingReminder] = useState(false)
@@ -96,7 +96,8 @@ export default function RegistrationsPage() {
 
   async function confirmAccept() {
     if (!acceptTarget) return
-    startTransition(async () => {
+    setIsSubmitting(true)
+    try {
       const result = await acceptRegistration(acceptTarget.id, eventId)
       if (result?.error) {
         toast.error(result.error)
@@ -106,19 +107,28 @@ export default function RegistrationsPage() {
         toast.success(`${acceptTarget.full_name} accepted — invitation email sent`)
       }
       setAcceptTarget(null)
-      loadData()
-    })
+      await loadData()
+    } catch (e: any) {
+      toast.error(e.message || 'An error occurred')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   async function confirmReject() {
     if (!rejectTarget) return
-    startTransition(async () => {
+    setIsSubmitting(true)
+    try {
       const result = await rejectRegistration(rejectTarget.id, eventId)
       if (result?.error) toast.error(result.error)
       else toast.success(`${rejectTarget.full_name} rejected`)
       setRejectTarget(null)
-      loadData()
-    })
+      await loadData()
+    } catch (e: any) {
+      toast.error(e.message || 'An error occurred')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   async function handleSendReminder() {
@@ -317,13 +327,19 @@ export default function RegistrationsPage() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    disabled={isSubmitting}
                     className="h-8 w-8 text-signal/60 hover:text-signal hover:bg-signal/10 transition-all"
-                    onClick={() => {
-                      startTransition(async () => {
+                    onClick={async () => {
+                      setIsSubmitting(true)
+                      try {
                         const result = await promoteFromWaitlist(reg.id, eventId)
                         if (result?.error) toast.error(result.error)
-                        else { toast.success(`${reg.full_name} moved to pending`); loadData() }
-                      })
+                        else { toast.success(`${reg.full_name} moved to pending`); await loadData() }
+                      } catch (e: any) {
+                        toast.error(e.message || 'An error occurred')
+                      } finally {
+                        setIsSubmitting(false)
+                      }
                     }}
                     aria-label={`Promote ${reg.full_name} from waitlist`}
                     title="Promote to pending"
@@ -356,7 +372,7 @@ export default function RegistrationsPage() {
         subjectLabel="REGISTRANT"
         body={`Accepting will create a guest entry, generate a QR code, and send an invitation email to ${acceptTarget?.email ?? 'their email'}.`}
         confirmLabel="ACCEPT & SEND INVITE"
-        isPending={isPending}
+        isPending={isSubmitting}
         onConfirm={confirmAccept}
       />
 
@@ -370,7 +386,7 @@ export default function RegistrationsPage() {
         subjectLabel="REGISTRANT"
         body="This person will not receive an invitation. You can revisit this later if needed."
         confirmLabel="REJECT_REGISTRATION"
-        isPending={isPending}
+        isPending={isSubmitting}
         onConfirm={confirmReject}
       />
 

@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     .update({
       status: 'checked_in',
       checked_in_at: new Date().toISOString(),
-      checked_in_by: scannerLink.id, // using scanner link ID
+      checked_in_by: null, // Scanners are token-based gates, not authenticated auth.users
     })
     .eq('id', invitation.id)
     .select(`

@@ -26,8 +26,8 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   const [addOpen, setAddOpen] = useState(false)
   const [editGuest, setEditGuest] = useState<GuestWithInvitation | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<GuestWithInvitation | null>(null)
-  const [isPending, startTransition] = useTransition()
-  const [isDeleting, startDeleteTransition] = useTransition()
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   async function loadGuests() {
     const supabase = createClient()
@@ -73,24 +73,30 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   }, [eventId])
 
   async function handleAdd(formData: FormData) {
-    startTransition(async () => {
+    setIsSaving(true)
+    try {
       const result = await addAttendee(eventId, formData)
       if (result?.error) {
         toast.error(result.error)
       } else if (result?.warning) {
         toast.warning(result.warning, { duration: 6000 })
         setAddOpen(false)
-        loadGuests()
+        await loadGuests()
       } else {
         toast.success('Guest added')
         setAddOpen(false)
-        loadGuests()
+        await loadGuests()
       }
-    })
+    } catch (e: any) {
+      toast.error(e.message || 'An error occurred')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   async function handleBulkAdd(emailsText: string, partySize: number) {
-    startTransition(async () => {
+    setIsSaving(true)
+    try {
       const result = await addMultipleAttendees(eventId, emailsText, partySize)
       if (result?.error) toast.error(result.error)
       else {
@@ -100,18 +106,27 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
           toast.success(`Successfully imported ${result?.count} guest(s)`)
         }
         setAddOpen(false)
-        loadGuests()
+        await loadGuests()
       }
-    })
+    } catch (e: any) {
+      toast.error(e.message || 'An error occurred')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   async function handleUpdate(formData: FormData) {
     if (!editGuest) return
-    startTransition(async () => {
+    setIsSaving(true)
+    try {
       const result = await updateAttendee(editGuest.id, eventId, formData)
       if (result?.error) toast.error(result.error)
-      else { toast.success('Guest updated'); setEditGuest(null); loadGuests() }
-    })
+      else { toast.success('Guest updated'); setEditGuest(null); await loadGuests() }
+    } catch (e: any) {
+      toast.error(e.message || 'An error occurred')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const totalSeats = guests.reduce((a, g) => a + (g.invitation?.party_size ?? 1), 0)
@@ -148,10 +163,10 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="single" className="mt-0">
-                  <GuestForm onSubmit={handleAdd} loading={isPending} prefix="add" tiers={tiers} />
+                  <GuestForm onSubmit={handleAdd} loading={isSaving} prefix="add" tiers={tiers} />
                 </TabsContent>
                 <TabsContent value="bulk" className="mt-0">
-                  <BulkGuestForm onSubmit={handleBulkAdd} loading={isPending} />
+                  <BulkGuestForm onSubmit={handleBulkAdd} loading={isSaving} />
                 </TabsContent>
               </Tabs>
             </DialogContent>
@@ -253,7 +268,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
               {editGuest && (
                 <GuestForm
                   onSubmit={handleUpdate}
-                  loading={isPending}
+                  loading={isSaving}
                   prefix="edit"
                   tiers={tiers}
                   defaultValues={{
@@ -279,13 +294,18 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
             body="Cancelling this guest's invitation will invalidate their QR code entry pass. This cannot be undone."
             confirmLabel="CANCEL_INVITATION"
             isPending={isDeleting}
-            onConfirm={() => {
+            onConfirm={async () => {
               if (!deleteTarget) return
-              startDeleteTransition(async () => {
+              setIsDeleting(true)
+              try {
                 const result = await cancelAttendeeInvitation(deleteTarget.id, eventId)
                 if (result?.error) toast.error(result.error)
-                else { toast.success('Invitation cancelled'); loadGuests(); setDeleteTarget(null) }
-              })
+                else { toast.success('Invitation cancelled'); await loadGuests(); setDeleteTarget(null) }
+              } catch (e: any) {
+                toast.error(e.message || 'An error occurred')
+              } finally {
+                setIsDeleting(false)
+              }
             }}
           />
         </>

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getEventAccess } from '@/lib/team-access'
 import { EventTabs } from './event-tabs'
 import { EventBreadcrumbs } from './event-breadcrumbs'
+import { EventStatusBadge } from './event-status-badge'
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   live:      { label: 'Live',      cls: 'status-live' },
@@ -108,12 +109,13 @@ export default async function EventLayout({
           </div>
         </div>
 
-        <div className={`inline-flex items-center gap-2 self-start sm:self-end shrink-0 ${statusInfo.cls}`}>
-          {event.status === 'live' && (
-            <span className="size-1.5 rounded-full bg-current animate-blink shrink-0" aria-hidden="true" />
-          )}
-          {statusInfo.label}
-        </div>
+        <EventStatusBadge
+          eventId={id}
+          eventName={event.name}
+          initialStatus={event.status}
+          canEdit={access.canEdit}
+          variant="header"
+        />
       </div>
 
       {/* Tab navigation */}

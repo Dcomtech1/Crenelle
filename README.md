@@ -128,6 +128,17 @@ supabase/migrations/
   014_fix_unsubscribe_default.sql      ← Fix unsubscribed_at default (bug fix)
   015_team_access.sql                  ← event_members table + co-host RLS
   016_add_co_organiser_role.sql        ← co_organiser role tier
+  017_ticket_tiers.sql                 ← ticket_tiers and tier_perks tables
+  018_tier_capacity_triggers.sql       ← Tier capacity constraint DB triggers
+  019_invitation_audit_trigger.sql     ← Creates trigger-based invitation audit logging
+  020_rls_ticket_tier_system.sql       ← RLS policies for ticket tiers and perks
+  021_trigger_fixes.sql                ← Fixes/optimizes tier capacity trigger constraints
+  022_merge_guests_registrations_attendees.sql ← Merges/replaces guests and registrations tables with unified attendees table
+  023_harden_checkin.sql               ← Hardens check-in by using qr_token as secure identifier
+  024_capacity_and_status_triggers.sql ← DB triggers enforcing single check-in, status transitions, and capacity boundaries
+  025_invitation_audit_trigger.sql     ← Re-configures/optimizes audit logs on invitations
+  026_rls_overhaul.sql                 ← Complete overhaul of Row Level Security (RLS) for the unified schema
+  027_fix_soft_deleted_tier_checkin.sql ← Handles soft-deleted ticket tiers during check-in validation
 ```
 
 ### 4. Run locally
@@ -176,10 +187,11 @@ crenelle/
 │   ├── actions/                   # Next.js Server Actions
 │   │   ├── auth.ts
 │   │   ├── events.ts
-│   │   ├── guests.ts
+│   │   ├── attendees.ts            # Guest & Attendee management
 │   │   ├── registrations.ts
 │   │   ├── scanner-links.ts
 │   │   ├── sender-profiles.ts
+│   │   ├── ticket-tiers.ts        # Ticket Tier & Perk management
 │   │   └── team.ts                # Co-host invite / remove / role update
 │   │
 │   └── api/
@@ -218,19 +230,21 @@ crenelle/
 
 ## Database Schema
 
-9 tables, all with Row Level Security enabled. Organisers can only read/write their own data. The admin service-role key bypasses RLS only for aggregate stats — no personal data is exposed.
+13 tables, all with Row Level Security enabled. Organisers can only read/write their own data. The admin service-role key bypasses RLS only for aggregate stats — no personal data is exposed.
 
 ```
-events ──────────────── guests ─────── invitations ─── entry_logs
+events ─────────────── attendees ─────── invitations ─── entry_logs
    │                       │
-   ├── scanner_links        └── (guest_id FK)
-   ├── registrations
+   ├── scanner_links       └── (attendee_id FK)
+   ├── ticket_tiers ─────── (joined via ticket_tier_id FK)
+   │       └── tier_perks
    ├── email_logs
    ├── sender_profiles
    └── event_members          (co-host team access — role per member)
 
 email_unsubscribes        (opt-out list — admin-only access)
 scan_errors               (error audit — admin-only access)
+invitation_audit_logs     (status & tier transition audit history logs)
 ```
 
 ---

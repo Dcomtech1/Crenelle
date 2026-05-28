@@ -125,6 +125,22 @@ async function getUnsubscribeUrl(email: string): Promise<string> {
   return `${appUrl}/api/unsubscribe`
 }
 
+/**
+ * Formats a 24-hour time string (e.g. "14:30:00" or "09:15") into a 12-hour format (e.g. "2:30 PM" or "9:15 AM").
+ */
+function formatTimeTo12Hour(timeStr: string | null | undefined): string {
+  if (!timeStr) return ''
+  const parts = timeStr.split(':')
+  if (parts.length < 2) return timeStr
+  let hour = parseInt(parts[0], 10)
+  const minute = parts[1]
+  if (isNaN(hour)) return timeStr
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  hour = hour % 12
+  if (hour === 0) hour = 12
+  return `${hour}:${minute} ${ampm}`
+}
+
 export interface EventDetails {
   name: string
   date: string
@@ -237,6 +253,18 @@ export async function sendInvitationEmail({
           </tr>`
   }
 
+  // Add seat details if assigned
+  let seatHtml = ''
+  if (invitation.seat_info) {
+    seatHtml = `
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;width:120px;font-weight:600;">SEAT</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+              ${invitation.seat_info}
+            </td>
+          </tr>`
+  }
+
   const html = `
 <!DOCTYPE html>
 <html>
@@ -336,7 +364,7 @@ export async function sendInvitationEmail({
           ${event.time ? `
           <tr>
             <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">TIME</td>
-            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${event.time.slice(0, 5)}</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${formatTimeTo12Hour(event.time)}</td>
           </tr>` : ''}
           <tr>
             <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">VENUE</td>
@@ -350,6 +378,7 @@ export async function sendInvitationEmail({
             <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">ADMITS</td>
             <td class="text-accent" style="padding:10px 0;font-size:15px;color:#BF8430;font-weight:bold;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${partySizeText}</td>
           </tr>
+          ${seatHtml}
           ${tierHtml}
         </table>
       </div>
@@ -466,6 +495,7 @@ export async function sendReminderEmailsDirect({
     const qrToken = invitation?.qr_token || recipient.invitationId
     const partySize = invitation?.party_size || 1
     const partySizeText = partySize === 1 ? '1 PERSON' : `${partySize} PEOPLE`
+    const actualRecipientName = invitation?.attendee?.name || recipient.name
 
     // Generate QR code URL using a hosted API (robust for emails), encoding qr_token
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${qrToken}&color=0A0A0A&bgcolor=F0EDE8`;
@@ -488,6 +518,18 @@ export async function sendReminderEmailsDirect({
             <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
               ${invitation.ticket_tier.name}
               ${perksText}
+            </td>
+          </tr>`
+    }
+
+    // Add seat details if assigned
+    let seatHtml = ''
+    if (invitation?.seat_info) {
+      seatHtml = `
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;width:120px;font-weight:600;">SEAT</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+              ${invitation.seat_info}
             </td>
           </tr>`
     }
@@ -602,16 +644,21 @@ export async function sendReminderEmailsDirect({
           ${event.time ? `
           <tr>
             <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">TIME</td>
-            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${event.time.slice(0, 5)}</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${formatTimeTo12Hour(event.time)}</td>
           </tr>` : ''}
-          <tr>
+           <tr>
             <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">VENUE</td>
             <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${event.venue}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">GUEST</td>
+            <td class="text-primary" style="padding:10px 0;font-size:15px;color:#0C0B09;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${actualRecipientName}</td>
           </tr>
           <tr>
             <td style="padding:10px 0;font-size:10px;letter-spacing:2.5px;color:#BF8430;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;">ADMITS</td>
             <td class="text-accent" style="padding:10px 0;font-size:15px;color:#BF8430;font-weight:bold;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${partySizeText}</td>
           </tr>
+          ${seatHtml}
           ${tierHtml}
         </table>
       </div>

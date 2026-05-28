@@ -142,28 +142,30 @@ export default function SignupPage() {
           />
 
           {/* Password Requirements Checklist */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-2 bg-foreground/5 p-3 border border-foreground/10">
-            {requirements.map((req) => {
-              const isMet = req.test(password)
-              return (
-                <div 
-                  key={req.label} 
-                  className={cn(
-                    "flex items-center gap-2 font-mono text-[9px] uppercase tracking-wider transition-colors",
-                    isMet ? "text-signal" : "text-foreground/30"
-                  )}
-                >
-                  <div className={cn(
-                    "size-3 border flex items-center justify-center shrink-0",
-                    isMet ? "border-signal bg-signal/10" : "border-foreground/20"
-                  )}>
-                    {isMet && <Check className="size-2" strokeWidth={4} />}
+          {password && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 mt-2 bg-foreground/5 p-3 border border-foreground/10">
+              {requirements.map((req) => {
+                const isMet = req.test(password)
+                return (
+                  <div 
+                    key={req.label} 
+                    className={cn(
+                      "flex items-center gap-2 font-mono text-[9px] uppercase tracking-wider transition-colors",
+                      isMet ? "text-signal" : "text-foreground/30"
+                    )}
+                  >
+                    <div className={cn(
+                      "size-3 border flex items-center justify-center shrink-0",
+                      isMet ? "border-signal bg-signal/10" : "border-foreground/20"
+                    )}>
+                      {isMet && <Check className="size-2" strokeWidth={4} />}
+                    </div>
+                    {req.label}
                   </div>
-                  {req.label}
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">

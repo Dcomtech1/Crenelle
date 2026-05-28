@@ -113,15 +113,39 @@ export function EventBannerInput({ defaultValue }: EventBannerInputProps) {
         </TabsList>
 
         <TabsContent value="upload" className="mt-0">
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-foreground/20 hover:border-foreground/50 aspect-video w-full cursor-pointer transition-all bg-background/5 hover:bg-background/20 group">
-            {uploading ? (
+          {uploading ? (
+            <div className="flex flex-col items-center justify-center border-2 border-dashed border-signal aspect-video w-full bg-background/5">
               <div className="text-center flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 text-signal animate-spin" />
                 <p className="font-mono text-[10px] uppercase tracking-widest text-signal animate-pulse">
                   UPLOADING_IMAGE_TO_STORAGE...
                 </p>
               </div>
-            ) : (
+            </div>
+          ) : bannerUrl ? (
+            <label className="relative flex border-2 border-foreground/30 aspect-video w-full overflow-hidden bg-void/50 group cursor-pointer select-none">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bannerUrl}
+                alt="Event banner preview"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-void/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <UploadCloud className="h-8 w-8 text-signal" />
+                <span className="font-mono text-[10px] text-signal uppercase tracking-widest">
+                  Click to replace image
+                </span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={uploading}
+                className="hidden"
+              />
+            </label>
+          ) : (
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-foreground/20 hover:border-foreground/50 aspect-video w-full cursor-pointer transition-all bg-background/5 hover:bg-background/20 group">
               <div className="text-center p-6 flex flex-col items-center gap-3">
                 <UploadCloud className="h-10 w-10 text-foreground/40 group-hover:text-signal group-hover:scale-105 transition-all" />
                 <div className="space-y-1">
@@ -133,15 +157,15 @@ export function EventBannerInput({ defaultValue }: EventBannerInputProps) {
                   </p>
                 </div>
               </div>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              disabled={uploading}
-              className="hidden"
-            />
-          </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={uploading}
+                className="hidden"
+              />
+            </label>
+          )}
         </TabsContent>
 
         <TabsContent value="url" className="mt-0 space-y-3">
@@ -163,7 +187,7 @@ export function EventBannerInput({ defaultValue }: EventBannerInputProps) {
         </TabsContent>
       </Tabs>
 
-      {bannerUrl && (
+      {bannerUrl && activeTab === 'url' && (
         <div className="relative border-2 border-foreground/30 aspect-video w-full overflow-hidden bg-void/50 group select-none mt-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

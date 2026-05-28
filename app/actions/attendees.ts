@@ -246,3 +246,23 @@ export async function cancelAttendeeInvitation(attendeeId: string, eventId: stri
   revalidatePath(`/events/${eventId}/guests`)
   return { success: true }
 }
+
+export async function updateAttendeeTicketTier(attendeeId: string, eventId: string, ticketTierId: string | null) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('invitations')
+    .update({ ticket_tier_id: ticketTierId || null })
+    .eq('attendee_id', attendeeId)
+
+  if (error) {
+    if (error.message?.includes('tier_capacity_exceeded')) {
+      return { error: 'Capacity exceeded for this ticket tier.' }
+    }
+    return { error: error.message }
+  }
+
+  revalidatePath(`/events/${eventId}/guests`)
+  return { success: true }
+}
+

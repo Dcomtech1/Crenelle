@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { CalendarDays, MapPin, Clock, CheckCircle2, XCircle, Users } from 'lucide-react'
 import { submitRegistration } from '@/app/actions/registrations'
 import { getOptimizedBannerUrl } from '@/lib/images'
+import { toast } from 'sonner'
 
 interface EventInfo {
   id: string
@@ -29,6 +30,7 @@ export default function PublicRegistrationPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [waitlisted, setWaitlisted] = useState(false)
+  const [selectedTierId, setSelectedTierId] = useState('')
   const isSubmitting = useRef(false)
 
   useEffect(() => {
@@ -50,8 +52,22 @@ export default function PublicRegistrationPage() {
     loadEvent()
   }, [slug])
 
+  useEffect(() => {
+    if (event?.tiers && event.tiers.length > 0) {
+      setSelectedTierId(event.tiers[0].id)
+    }
+  }, [event])
+
   async function handleSubmit(formData: FormData) {
     if (isSubmitting.current || !event) return
+
+    // Intercept paid tier selections
+    const selectedTier = event.tiers?.find((t) => t.id === selectedTierId)
+    if (selectedTier && selectedTier.price > 0) {
+      toast.info("Online payments are coming soon! Paid registrations are not yet enabled.", { duration: 5000 })
+      return
+    }
+
     isSubmitting.current = true
     setSubmitting(true)
     setError(null)
@@ -315,25 +331,37 @@ export default function PublicRegistrationPage() {
                     <select
                       id="reg-tier"
                       name="ticket_tier_id"
+                      value={selectedTierId}
+                      onChange={(e) => setSelectedTierId(e.target.value)}
                       required
                       className="w-full bg-background border-2 border-foreground/40 text-foreground font-mono text-sm px-4 py-3 focus:outline-none focus:border-signal transition-colors"
                     >
                       {event.tiers.map((t) => (
                         <option key={t.id} value={t.id}>
-                          {t.name} (₦{(t.price / 100).toLocaleString()})
+                          {t.name} {t.price === 0 ? '(Free)' : `(₦${(t.price / 100).toLocaleString()})`}
                         </option>
                       ))}
                     </select>
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full h-14 bg-signal text-void font-display text-2xl uppercase tracking-wider hover:bg-signal/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-                >
-                  {submitting ? 'SUBMITTING...' : 'REGISTER →'}
-                </button>
+                {(() => {
+                  const selectedTier = event.tiers?.find((t) => t.id === selectedTierId)
+                  const isPaidTier = selectedTier ? selectedTier.price > 0 : false
+                  return (
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full h-14 bg-signal text-void font-display text-2xl uppercase tracking-wider hover:bg-signal/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                    >
+                      {submitting
+                        ? 'SUBMITTING...'
+                        : isPaidTier
+                        ? 'PAY & REGISTER →'
+                        : 'REGISTER →'}
+                    </button>
+                  )
+                })()}
               </form>
             </>
           )}

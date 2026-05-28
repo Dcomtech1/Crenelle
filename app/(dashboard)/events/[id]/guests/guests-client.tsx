@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import { useParams } from 'next/navigation'
 import { Plus, Pencil, X, Users, Lock } from 'lucide-react'
-import { addAttendee, updateAttendee, cancelAttendeeInvitation, addMultipleAttendees } from '@/app/actions/attendees'
+import { addAttendee, updateAttendee, cancelAttendeeInvitation, addMultipleAttendees, updateAttendeeTicketTier } from '@/app/actions/attendees'
 import { createClient } from '@/lib/supabase/client'
 import { fieldCls, labelCls, hintCls } from '@/lib/form-styles'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   const [deleteTarget, setDeleteTarget] = useState<GuestWithInvitation | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSavingTier, setIsSavingTier] = useState<string | null>(null)
 
   async function loadGuests() {
     const supabase = createClient()
@@ -130,6 +131,23 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
     }
   }
 
+  async function handleTierChange(guestId: string, tierId: string | null) {
+    setIsSavingTier(guestId)
+    try {
+      const result = await updateAttendeeTicketTier(guestId, eventId, tierId)
+      if (result?.error) {
+        toast.error(result.error)
+      } else {
+        toast.success('Ticket tier updated successfully')
+        await loadGuests()
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'An error occurred')
+    } finally {
+      setIsSavingTier(null)
+    }
+  }
+
   const totalSeats = guests.reduce((a, g) => a + (g.invitation?.party_size ?? 1), 0)
 
   return (
@@ -216,11 +234,27 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
               className="grid grid-cols-[1fr_1fr_auto_auto_auto] items-center px-4 py-4 gap-4 border-b border-foreground/5 hover:bg-foreground/2 transition-colors group"
             >
               <div className="flex flex-col truncate">
-                <span className="font-mono text-sm text-foreground font-medium truncate">{guest.name}</span>
-                {guest.invitation?.ticket_tier?.name && (
-                  <span className="inline-block self-start font-mono text-[9px] uppercase tracking-wider bg-foreground/10 text-foreground px-1.5 py-0.5 mt-1 font-semibold">
-                    {guest.invitation.ticket_tier.name}
-                  </span>
+                <span className="font-mono text-sm text-foreground font-medium truncate mb-1">{guest.name}</span>
+                {canEdit ? (
+                  <select
+                    value={guest.invitation?.ticket_tier_id ?? ''}
+                    disabled={isSavingTier === guest.id}
+                    onChange={(e) => handleTierChange(guest.id, e.target.value || null)}
+                    className="self-start font-mono text-[9px] uppercase tracking-wider bg-foreground/10 text-foreground px-1.5 py-0.5 mt-0.5 font-semibold border border-foreground/15 rounded-none outline-none cursor-pointer hover:bg-foreground/20 max-w-[150px] truncate"
+                  >
+                    <option value="">No Tier</option>
+                    {tiers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  guest.invitation?.ticket_tier?.name && (
+                    <span className="inline-block self-start font-mono text-[9px] uppercase tracking-wider bg-foreground/10 text-foreground px-1.5 py-0.5 mt-1 font-semibold">
+                      {guest.invitation.ticket_tier.name}
+                    </span>
+                  )
                 )}
               </div>
               <span className="font-mono text-xs text-foreground/60 truncate">{guest.phone || guest.email || '—'}</span>

@@ -32,7 +32,17 @@ const LIVE_EVENT = { status: 'live' }
 const GUEST = { id: 'att-1', name: 'Alice Doe', email: 'alice@x.com', phone: null }
 const TICKET_TIER = { id: 'tier-1', name: 'VIP' }
 
-const VALID_INVITATION = {
+const VALID_INVITATION: {
+  id: string
+  event_id: string
+  qr_token: string
+  status: string
+  checked_in_at: string | null
+  party_size: number
+  seat_info: string
+  attendee: typeof GUEST
+  ticket_tier: typeof TICKET_TIER
+} = {
   id: INVITATION_ID,
   event_id: EVENT_ID,
   qr_token: QR_TOKEN,

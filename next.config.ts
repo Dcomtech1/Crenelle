@@ -13,13 +13,10 @@ export default withSentryConfig(nextConfig, {
   // Auth token for source map uploads (generate at https://sentry.io/settings/auth-tokens/)
   authToken: process.env.SENTRY_AUTH_TOKEN,
 
-  // Upload source maps only during production builds
+  // Upload source maps only during production builds; hide them from the browser bundle
   sourcemaps: {
     disable: process.env.NODE_ENV !== 'production',
   },
-
-  // Hides source maps from the browser (they're uploaded to Sentry, not served publicly)
-  hideSourceMaps: true,
 
   // Suppresses Sentry CLI log output during builds
   silent: !process.env.CI,

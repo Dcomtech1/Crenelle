@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Users } from 'lucide-react'
@@ -6,6 +7,30 @@ import { getEventAccess } from '@/lib/team-access'
 import { EventTabs } from './event-tabs'
 import { EventBreadcrumbs } from './event-breadcrumbs'
 import { EventStatusBadge } from './event-status-badge'
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+
+  const { data: event } = await supabase
+    .from('events')
+    .select('name')
+    .eq('id', id)
+    .single()
+
+  const eventName = event?.name ?? 'Event'
+
+  return {
+    title: {
+      // Sub-pages export `export const metadata = { title: 'Guests' }` and
+      // automatically get: "Summer Gala — Guests | Crenelle"
+      default:  `${eventName} | Crenelle`,
+      template: `${eventName} — %s | Crenelle`,
+    },
+  }
+}
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   live:      { label: 'Live',      cls: 'status-live' },

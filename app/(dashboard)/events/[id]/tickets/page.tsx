@@ -1,6 +1,9 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getEventAccess } from '@/lib/team-access'
 import TicketsPageClient from './tickets-client'
+
+export const metadata: Metadata = { title: 'Tickets' }
 
 export default async function TicketsPage({
   params,

@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { sendInvitationEmail } from '@/lib/email'
 import { validateEmailBlob } from '@/lib/validations/guest-import'
+import { sendInvitationWhatsApp } from '@/lib/whatsapp'
+import * as Sentry from '@sentry/nextjs'
 
 export async function addAttendee(eventId: string, formData: FormData) {
   const supabase = await createClient()
@@ -49,9 +51,11 @@ export async function addAttendee(eventId: string, formData: FormData) {
     return { error: invError?.message || 'Failed to generate invitation' }
   }
 
-  // Automatically send the invitation email if email is provided
+  // Automatically send the invitation email/WhatsApp if details are provided
   let emailWarning: string | undefined = undefined
-  if (email) {
+  let whatsappWarning: string | undefined = undefined
+
+  if (email || phone) {
     const { data: event } = await supabase
       .from('events')
       .select('name, date, time, venue, description, banner_url')
@@ -59,31 +63,58 @@ export async function addAttendee(eventId: string, formData: FormData) {
       .single()
 
     if (event) {
-      try {
-        const emailResult = await sendInvitationEmail({
-          eventId,
-          recipientEmail: email,
-          recipientName: name,
-          invitationId: invitation.id,
-          event,
-        })
-        if (emailResult && 'error' in emailResult && emailResult.error) {
-          console.error('Failed to send automated invitation email:', emailResult.error)
-          emailWarning = emailResult.error
+      if (email) {
+        try {
+          const emailResult = await sendInvitationEmail({
+            eventId,
+            recipientEmail: email,
+            recipientName: name,
+            invitationId: invitation.id,
+            event,
+          })
+          if (emailResult && 'error' in emailResult && emailResult.error) {
+            console.error('Failed to send automated invitation email:', emailResult.error)
+            emailWarning = emailResult.error
+          }
+        } catch (e: any) {
+          console.error('Failed to send automated invitation email:', e)
+          Sentry.captureException(e, { extra: { eventId, context: 'add_attendee_email' } })
+          emailWarning = e.message || 'Unknown email dispatch error'
         }
-      } catch (e: any) {
-        console.error('Failed to send automated invitation email:', e)
-        emailWarning = e.message || 'Unknown email dispatch error'
+      }
+
+      if (phone) {
+        try {
+          const whatsappResult = await sendInvitationWhatsApp({
+            eventId,
+            recipientPhone: phone,
+            recipientName: name,
+            invitationId: invitation.id,
+            event,
+          })
+          if (whatsappResult && 'error' in whatsappResult && whatsappResult.error) {
+            console.error('Failed to send automated WhatsApp invitation:', whatsappResult.error)
+            whatsappWarning = whatsappResult.error
+          }
+        } catch (e: any) {
+          console.error('Failed to send automated WhatsApp invitation:', e)
+          Sentry.captureException(e, { extra: { eventId, context: 'add_attendee_whatsapp' } })
+          whatsappWarning = e.message || 'Unknown WhatsApp dispatch error'
+        }
       }
     }
   }
 
   revalidatePath(`/events/${eventId}/guests`)
 
-  if (emailWarning) {
+  const warnings: string[] = []
+  if (emailWarning) warnings.push(`Email failed: ${emailWarning}`)
+  if (whatsappWarning) warnings.push(`WhatsApp failed: ${whatsappWarning}`)
+
+  if (warnings.length > 0) {
     return {
       success: true,
-      warning: `Guest added, but the invitation email failed to send: ${emailWarning}. If you are in sandbox mode, you can only send emails to your own registered email address.`,
+      warning: `Guest added, but some notifications failed to send: ${warnings.join('; ')}.`,
     }
   }
 
@@ -184,6 +215,7 @@ export async function addMultipleAttendees(eventId: string, emailsText: string, 
       }
     } catch (e: any) {
       console.error(`Bulk import error for ${email}:`, e)
+      Sentry.captureException(e, { extra: { eventId, email, context: 'add_multiple_attendees' } })
       errors.push(`${email}: ${e.message || 'unknown error'}`)
     }
   }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Cormorant_Garamond, Syne } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
+import { SentryUserProvider } from '@/components/sentry-user-provider'
 import './globals.css'
 
 const cormorant = Cormorant_Garamond({
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           enableSystem
           disableTransitionOnChange
         >
+          <SentryUserProvider />
           {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>

@@ -47,7 +47,7 @@ export default async function EventLayout({
   // Build tab list based on event type and role
   const baseTabs = [
     { label: 'Overview',       href: '' },
-    // { label: 'Tickets',        href: '/tickets' },
+    { label: 'Tickets',        href: '/tickets' },
     { label: 'Guests',         href: '/guests' },
     { label: 'Live Dashboard', href: '/dashboard' },
     { label: 'Scanner Links',  href: '/scanner-links' },

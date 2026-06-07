@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendInvitationEmail, sendReminderEmailsDirect } from '@/lib/email'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { sendInvitationWhatsApp } from '@/lib/whatsapp'
+import * as Sentry from '@sentry/nextjs'
 
 /**
  * Public registration — called from the public registration form.
@@ -109,8 +111,12 @@ export async function submitRegistration(eventId: string, formData: FormData) {
           registration_status: 'waitlist',
           ticket_tier_id: ticketTierId,
         })
-      if (waitlistError) return { error: waitlistError.message }
+      if (waitlistError) {
+        Sentry.captureException(waitlistError, { extra: { eventId, context: 'waitlist_insert_after_cap' } })
+        return { error: waitlistError.message }
+      }
     } else {
+      Sentry.captureException(insertError, { extra: { eventId, context: 'submit_registration_insert' } })
       return { error: insertError.message }
     }
   }
@@ -169,7 +175,7 @@ export async function acceptRegistration(attendeeId: string, eventId: string, se
 
   if (!event) return { error: 'Event not found' }
 
-  // 5. Trigger invitation email
+  // 5. Trigger invitation email and WhatsApp
   let emailWarning: string | undefined = undefined
   if (attendee.email) {
     try {
@@ -186,17 +192,47 @@ export async function acceptRegistration(attendeeId: string, eventId: string, se
       }
     } catch (e: any) {
       console.error('Failed to send invitation email:', e)
+      Sentry.captureException(e, { extra: { attendeeId, eventId, context: 'accept_registration_email' } })
       emailWarning = e.message || 'Unknown email dispatch error'
+    }
+  }
+
+  let whatsappWarning: string | undefined = undefined
+  if (attendee.phone) {
+    try {
+      const whatsappResult = await sendInvitationWhatsApp({
+        eventId,
+        recipientPhone: attendee.phone,
+        recipientName: attendee.name,
+        invitationId: invitation.id,
+        event,
+      })
+      if (whatsappResult && 'error' in whatsappResult && whatsappResult.error) {
+        console.error('Failed to send WhatsApp invitation:', whatsappResult.error)
+        whatsappWarning = whatsappResult.error
+      }
+    } catch (e: any) {
+      console.error('Failed to send WhatsApp invitation:', e)
+      Sentry.captureException(e, { extra: { attendeeId, eventId, context: 'accept_registration_whatsapp' } })
+      whatsappWarning = e.message || 'Unknown WhatsApp dispatch error'
     }
   }
 
   revalidatePath(`/events/${eventId}/registrations`)
   revalidatePath(`/events/${eventId}/guests`)
 
+  const warnings: string[] = []
   if (emailWarning) {
+    warnings.push(`Email failed: ${emailWarning}`)
+  }
+  if (whatsappWarning) {
+    warnings.push(`WhatsApp failed: ${whatsappWarning}`)
+  }
+
+  if (warnings.length > 0) {
     return {
       success: true,
-      warning: `Registrant accepted, but the invitation email failed to send: ${emailWarning}. If you are in sandbox mode, you can only send emails to your own registered email address.`,
+      warning: `Registrant accepted, but some notifications failed to send: ${warnings.join('; ')}.`,
     }
   }
 
@@ -341,6 +377,7 @@ export async function sendReminderEmails(eventId: string, customMessage: string)
         : undefined,
     }
   } catch (e: any) {
+    Sentry.captureException(e, { extra: { eventId, context: 'send_reminder_emails' } })
     return { error: e.message || 'Failed to send reminder emails' }
   }
 }

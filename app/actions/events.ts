@@ -3,17 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { generateSlug } from '@/lib/utils/slug'
 
-/** Generate a URL-safe slug from the event name + random suffix */
-function generateSlug(name: string): string {
-  const base = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 40)
-  const suffix = Math.random().toString(36).substring(2, 6)
-  return `${base}-${suffix}`
-}
+
 
 export async function createEvent(formData: FormData) {
   const supabase = await createClient()

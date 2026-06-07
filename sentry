@@ -1,0 +1,90 @@
+# Testing & Sentry — Walkthrough
+
+## What Was Done
+
+### Unit & Integration Tests (Vitest) — 90/90 passing ✅
+
+**Infrastructure added:**
+- [`vitest.config.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/vitest.config.ts) — jsdom environment, path aliases, coverage config
+- [`vitest.setup.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/vitest.setup.ts) — stubs for `next/cache`, `next/navigation`, `next/headers`; sets required env vars
+- `npm run test`, `npm run test:watch`, `npm run test:coverage` scripts added
+
+**Unit tests (pure logic, no mocking needed):**
+| File | Tests | What's covered |
+|---|---|---|
+| [`__tests__/lib/rate-limit.test.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/__tests__/lib/rate-limit.test.ts) | 6 | First request, increments, blocking, window reset, key isolation, resetAt timestamp |
+| [`__tests__/lib/utils/slug.test.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/__tests__/lib/utils/slug.test.ts) | 11 | Casing, hyphenation, special chars, truncation, suffix format, uniqueness |
+| [`__tests__/lib/validations/auth.test.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/__tests__/lib/validations/auth.test.ts) | 14 | All signupSchema rules (8 cases), loginSchema (5 cases) |
+| [`__tests__/lib/validations/guest-import.test.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/__tests__/lib/validations/guest-import.test.ts) | 27 | validateEmailBlob (10), GuestRowSchema (10), validateCsvRows (7) |
+
+**Integration tests (server actions — Supabase fully mocked):**
+| File | Tests | What's covered |
+|---|---|---|
+| [`__tests__/actions/registrations.test.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/__tests__/actions/registrations.test.ts) | 12 | submitRegistration (7), acceptRegistration (2), rejectRegistration (2), promoteFromWaitlist (1) |
+| [`__tests__/actions/attendees.test.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/__tests__/actions/attendees.test.ts) | 9 | addAttendee (3), addMultipleAttendees (2), cancelAttendeeInvitation (2), updateAttendeeTicketTier (2) |
+| [`__tests__/actions/events.test.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/__tests__/actions/events.test.ts) | 11 | createEvent (3), updateEventStatus (2), updateEvent (3), deleteEvent (2) |
+
+> **Key insight discovered:** The rate-limiter uses a module-level `Map` that persists across tests in the same process. Tests now use unique emails via `uniqueEmail()` to avoid state bleed.
+>
+> **Zod v4 behaviour:** `.email()` validates before `.transform()` runs — so whitespace-padded emails fail validation (they're not trimmed first). Tests were updated to accurately reflect this.
+
+---
+
+### E2E Tests (Playwright)
+
+**Config:** [`playwright.config.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/playwright.config.ts) — Chromium + Mobile Chrome, auto-starts `next dev`, screenshots/traces on failure.
+
+| File | What's tested |
+|---|---|
+| [`e2e/auth.spec.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/e2e/auth.spec.ts) | Login/signup page rendering, invalid credentials, empty-field validation |
+| [`e2e/public-registration.spec.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/e2e/public-registration.spec.ts) | Full registration flow, duplicate detection, 404 for unknown slug |
+| [`e2e/events.spec.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/e2e/events.spec.ts) | Dashboard, create event, status update, delete confirmation |
+| [`e2e/guests.spec.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/e2e/guests.spec.ts) | Guest list, add guest dialog, bulk import |
+
+**To activate E2E tests**, add these to `.env.local`:
+```
+E2E_TEST_EMAIL=...
+E2E_TEST_PASSWORD=...
+E2E_TEST_EVENT_SLUG=...   # for registration tests
+E2E_TEST_EVENT_ID=...     # for guest tests
+```
+
+Then run:
+```bash
+npx playwright install  # first time only
+npm run test:e2e
+```
+
+---
+
+### Sentry Error Monitoring
+
+**Files created:**
+- [`sentry.client.config.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/sentry.client.config.ts) — Session Replay (100% on error, 5% others), browser error capture
+- [`sentry.server.config.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/sentry.server.config.ts) — Server-side error capture
+- [`sentry.edge.config.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/sentry.edge.config.ts) — Edge runtime (middleware)
+- [`components/sentry-user-provider.tsx`](file:///c:/Users/olana/OneDrive/Documents/crenelle/components/sentry-user-provider.tsx) — Sets `Sentry.setUser()` on auth state change
+
+**Files modified:**
+- [`next.config.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/next.config.ts) — Wrapped with `withSentryConfig` (source maps, tree-shaking)
+- [`app/layout.tsx`](file:///c:/Users/olana/OneDrive/Documents/crenelle/app/layout.tsx) — Mounts `<SentryUserProvider />`
+- [`app/actions/registrations.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/app/actions/registrations.ts), [`attendees.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/app/actions/attendees.ts), [`team.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/app/actions/team.ts) — `captureException` on unexpected errors
+
+**To activate Sentry**, add to `.env.local`:
+```
+NEXT_PUBLIC_SENTRY_DSN=https://xxx@oxx.ingest.sentry.io/xxx
+SENTRY_DSN=https://xxx@oxx.ingest.sentry.io/xxx
+SENTRY_ORG=your-org-slug
+SENTRY_PROJECT=crenelle
+SENTRY_AUTH_TOKEN=sntrys_...  # only needed for production builds with source maps
+```
+
+Create a new Sentry project at [sentry.io](https://sentry.io) → New Project → Next.js.
+
+See [`.env.sentry-and-tests.example`](file:///c:/Users/olana/OneDrive/Documents/crenelle/.env.sentry-and-tests.example) for all variable descriptions.
+
+---
+
+### Utility Extraction
+
+[`lib/utils/slug.ts`](file:///c:/Users/olana/OneDrive/Documents/crenelle/lib/utils/slug.ts) — `generateSlug()` moved here from `app/actions/events.ts`. Zero behaviour change; now independently testable.

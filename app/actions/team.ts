@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendCoHostInviteEmail } from '@/lib/email'
 import type { EventMember, MemberRole } from '@/lib/types'
+import * as Sentry from '@sentry/nextjs'
 
 // ── Auth helper ────────────────────────────────────────────────
 
@@ -51,7 +52,8 @@ export async function getTeamMembers(eventId: string): Promise<{
           member_email: user?.email ?? 'Unknown',
           member_name: user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? 'Unknown',
         } as EventMember
-      } catch {
+      } catch (e) {
+        Sentry.captureException(e, { extra: { memberId: m.member_id, context: 'get_team_members_user_lookup' } })
         return { ...m, member_email: 'Unknown', member_name: 'Unknown' } as EventMember
       }
     })

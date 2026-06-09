@@ -14,6 +14,11 @@ export async function GET(request: Request) {
     }
   }
 
-  // Return the user to an error page or login page if exchange fails
+  // Return the user to an error page, settings, or login page if exchange fails
+  if (next && next.startsWith('/settings')) {
+    const divider = next.includes('?') ? '&' : '?'
+    return NextResponse.redirect(`${origin}${next}${divider}error=OAuth exchange failed`)
+  }
+
   return NextResponse.redirect(`${origin}/login?error=OAuth exchange failed`)
 }

@@ -26,6 +26,8 @@ export default function EventOverviewPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [editEventType, setEditEventType] = useState<'closed' | 'open'>('closed')
+  const [editTimezone, setEditTimezone] = useState('Africa/Lagos')
+  const [showTzPicker, setShowTzPicker] = useState(false)
   const isSubmitting = useRef(false)
 
   // Reminder dialog state
@@ -45,8 +47,10 @@ export default function EventOverviewPage() {
       if (data) {
         setEvent(data)
         setEditEventType(data.event_type || 'closed')
+        // Seed the edit timezone from the saved value
+        setEditTimezone(data.timezone || 'Africa/Lagos')
 
-        // Resolve user to check if they are the owner
+        // Resolve current user to check if they are the owner
         const { data: { user } } = await supabase.auth.getUser()
         if (user && data.organizer_id === user.id) {
           setCanEdit(true)
@@ -205,6 +209,31 @@ export default function EventOverviewPage() {
             <div className="flex flex-col gap-2">
               <label htmlFor="ev-time" className={labelCls}>Time</label>
               <input id="ev-time" name="time" type="time" defaultValue={event.time ?? ''} className={fieldCls} />
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-mono text-[9px] uppercase tracking-widest text-foreground/40">
+                  Timezone: {editTimezone}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowTzPicker((v) => !v)}
+                  className="font-mono text-[9px] uppercase tracking-widest text-signal/70 hover:text-signal underline underline-offset-2 transition-colors"
+                >
+                  {showTzPicker ? 'close' : 'change?'}
+                </button>
+              </div>
+              {showTzPicker && (
+                <select
+                  value={editTimezone}
+                  onChange={(e) => setEditTimezone(e.target.value)}
+                  className={`${fieldCls} text-xs`}
+                  aria-label="Event timezone"
+                >
+                  {COMMON_TIMEZONES.map((tz) => (
+                    <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+                  ))}
+                </select>
+              )}
+              <input type="hidden" name="timezone" value={editTimezone} />
             </div>
           </div>
 
@@ -488,3 +517,18 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
     </div>
   )
 }
+
+const COMMON_TIMEZONES = [
+  'Africa/Abidjan', 'Africa/Accra', 'Africa/Cairo',
+  'Africa/Johannesburg', 'Africa/Lagos', 'Africa/Nairobi',
+  'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/New_York', 'America/Sao_Paulo', 'America/Toronto',
+  'America/Mexico_City', 'America/Bogota', 'America/Buenos_Aires',
+  'Asia/Calcutta', 'Asia/Dubai', 'Asia/Hong_Kong',
+  'Asia/Jakarta', 'Asia/Karachi', 'Asia/Riyadh',
+  'Asia/Seoul', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Tokyo',
+  'Europe/Amsterdam', 'Europe/Berlin', 'Europe/Istanbul',
+  'Europe/London', 'Europe/Madrid', 'Europe/Moscow', 'Europe/Paris',
+  'Australia/Sydney', 'Pacific/Auckland',
+  'UTC',
+]

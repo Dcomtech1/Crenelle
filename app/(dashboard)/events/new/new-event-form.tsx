@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Lock, Globe, Mail } from 'lucide-react'
@@ -18,7 +18,19 @@ export function NewEventForm({ profiles }: NewEventFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [eventType, setEventType] = useState<'closed' | 'open'>('closed')
+  const [timezone, setTimezone] = useState('Africa/Lagos')
+  const [showTzPicker, setShowTzPicker] = useState(false)
   const isSubmitting = useRef(false)
+
+  // Auto-detect the organiser's local timezone on mount
+  useEffect(() => {
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone
+      if (detected) setTimezone(detected)
+    } catch {
+      // keep default
+    }
+  }, [])
 
   async function handleSubmit(formData: FormData) {
     if (isSubmitting.current) return
@@ -133,6 +145,32 @@ export function NewEventForm({ profiles }: NewEventFormProps) {
           <div className="flex flex-col gap-2">
             <label htmlFor="new-ev-time" className={labelCls}>Time</label>
             <input id="new-ev-time" name="time" type="time" className={fieldCls} />
+            {/* Timezone: auto-detected, shown as hint with optional override */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-mono text-[9px] uppercase tracking-widest text-foreground/40">
+                Timezone: {timezone}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowTzPicker((v) => !v)}
+                className="font-mono text-[9px] uppercase tracking-widest text-signal/70 hover:text-signal underline underline-offset-2 transition-colors"
+              >
+                {showTzPicker ? 'close' : 'change?'}
+              </button>
+            </div>
+            {showTzPicker && (
+              <select
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className={`${fieldCls} text-xs`}
+                aria-label="Event timezone"
+              >
+                {COMMON_TIMEZONES.map((tz) => (
+                  <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            )}
+            <input type="hidden" name="timezone" value={timezone} />
           </div>
         </div>
 
@@ -260,3 +298,27 @@ export function NewEventForm({ profiles }: NewEventFormProps) {
     </div>
   )
 }
+
+// 34 common IANA timezones covering every major region.
+// Shown in the collapsible override picker when the auto-detected zone is wrong
+// (e.g. a Lagos organiser running a London event).
+const COMMON_TIMEZONES = [
+  // Africa
+  'Africa/Abidjan', 'Africa/Accra', 'Africa/Cairo',
+  'Africa/Johannesburg', 'Africa/Lagos', 'Africa/Nairobi',
+  // Americas
+  'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/New_York', 'America/Sao_Paulo', 'America/Toronto',
+  'America/Mexico_City', 'America/Bogota', 'America/Buenos_Aires',
+  // Asia
+  'Asia/Calcutta', 'Asia/Dubai', 'Asia/Hong_Kong',
+  'Asia/Jakarta', 'Asia/Karachi', 'Asia/Riyadh',
+  'Asia/Seoul', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Tokyo',
+  // Europe
+  'Europe/Amsterdam', 'Europe/Berlin', 'Europe/Istanbul',
+  'Europe/London', 'Europe/Madrid', 'Europe/Moscow', 'Europe/Paris',
+  // Oceania
+  'Australia/Sydney', 'Pacific/Auckland',
+  // UTC
+  'UTC',
+]

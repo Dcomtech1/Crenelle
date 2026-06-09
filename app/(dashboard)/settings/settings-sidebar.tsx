@@ -16,10 +16,9 @@ export function SettingsSidebar() {
     },
     {
       label: 'Account',
-      href: '#',
+      href: '/settings/account',
       icon: User,
-      disabled: true,
-      badge: 'Soon'
+      disabled: false,
     },
     {
       label: 'General',

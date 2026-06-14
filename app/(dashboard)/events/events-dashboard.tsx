@@ -7,6 +7,7 @@ import { EventCard } from "@/components/event-card"
 import { DeleteEventDialog } from "@/components/delete-event-dialog"
 import { StatusChangeDialog } from "@/components/status-change-dialog"
 import { deleteEvent } from "@/app/actions/events"
+import { EmptyState } from "@/components/empty-state"
 import type { Event, Invitation } from "@/lib/types"
 
 import { useDashboardData } from "./hooks/use-dashboard-data"
@@ -73,15 +74,18 @@ export function EventsDashboardClient({
         />
 
         {events.length === 0 ? (
-          <div className="py-16 text-center border border-border">
-            <p className="font-display text-xl text-muted-foreground italic mb-4">No events yet</p>
-            <Link
-              href="/events/new"
-              className="font-sans text-sm text-copper underline underline-offset-4 hover:opacity-80 transition-opacity"
-            >
-              Create your first event →
-            </Link>
-          </div>
+          <EmptyState
+            icon={<Users className="h-10 w-10" />}
+            title="NO_EVENTS_YET"
+            subtitle="Create your first event to start issuing entry passes and scanning guests"
+            action={
+              <Link href="/events/new">
+                <button className="inline-flex items-center gap-2 bg-foreground text-background font-mono text-xs font-semibold uppercase tracking-widest px-5 py-3 hover:opacity-80 transition-opacity cursor-pointer">
+                  Create your first event →
+                </button>
+              </Link>
+            }
+          />
         ) : (
           <>
             <ControlBar filter={filter} setFilter={setFilter} sortBy={sortBy} setSortBy={setSortBy} />

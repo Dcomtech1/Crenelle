@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 
 interface TicketTierWithAllocations {
@@ -31,53 +32,58 @@ export default function TicketsPageClient({ canEdit }: { canEdit: boolean }) {
   const [deleteTarget, setDeleteTarget] = useState<TicketTierWithAllocations | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   async function loadData() {
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
 
-    // 1. Fetch all active tiers
-    const { data: tiersData, error: tiersError } = await supabase
-      .from('ticket_tiers')
-      .select('*')
-      .eq('event_id', eventId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: true })
+      // 1. Fetch all active tiers
+      const { data: tiersData, error: tiersError } = await supabase
+        .from('ticket_tiers')
+        .select('*')
+        .eq('event_id', eventId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
 
-    if (tiersError) {
-      toast.error(`Failed to load ticket tiers: ${tiersError.message}`)
-      return
-    }
-
-    // 2. Fetch current allocation sizes from active invitations
-    const { data: allocations, error: allocError } = await supabase
-      .from('invitations')
-      .select('party_size, ticket_tier_id')
-      .eq('event_id', eventId)
-      .in('status', ['active', 'checked_in', 'pending'])
-
-    if (allocError) {
-      toast.error(`Failed to load allocations: ${allocError.message}`)
-      return
-    }
-
-    // Map allocation counts to tiers
-    const mappedTiers: TicketTierWithAllocations[] = (tiersData ?? []).map((tier: any) => {
-      const allocatedCount = (allocations ?? [])
-        .filter((a) => a.ticket_tier_id === tier.id)
-        .reduce((sum, current) => sum + (current.party_size ?? 1), 0)
-
-      return {
-        id: tier.id,
-        name: tier.name,
-        price: tier.price,
-        capacity: tier.capacity,
-        is_public: tier.is_public,
-        currency: tier.currency || 'NGN',
-        allocatedCount,
+      if (tiersError) {
+        toast.error(`Failed to load ticket tiers: ${tiersError.message}`)
+        return
       }
-    })
 
-    setTiers(mappedTiers)
+      // 2. Fetch current allocation sizes from active invitations
+      const { data: allocations, error: allocError } = await supabase
+        .from('invitations')
+        .select('party_size, ticket_tier_id')
+        .eq('event_id', eventId)
+        .in('status', ['active', 'checked_in', 'pending'])
+
+      if (allocError) {
+        toast.error(`Failed to load allocations: ${allocError.message}`)
+        return
+      }
+
+      // Map allocation counts to tiers
+      const mappedTiers: TicketTierWithAllocations[] = (tiersData ?? []).map((tier: any) => {
+        const allocatedCount = (allocations ?? [])
+          .filter((a) => a.ticket_tier_id === tier.id)
+          .reduce((sum, current) => sum + (current.party_size ?? 1), 0)
+
+        return {
+          id: tier.id,
+          name: tier.name,
+          price: tier.price,
+          capacity: tier.capacity,
+          is_public: tier.is_public,
+          currency: tier.currency || 'NGN',
+          allocatedCount,
+        }
+      })
+
+      setTiers(mappedTiers)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -186,7 +192,7 @@ export default function TicketsPageClient({ canEdit }: { canEdit: boolean }) {
         <SectionHeader
           eyebrow="TICKET_MANAGEMENT"
           title="Ticket Tiers"
-          subtitle={`${tiers.length} active admission tier${tiers.length !== 1 ? 's' : ''}`}
+          subtitle={loading ? "Loading ticket tiers..." : `${tiers.length} active admission tier${tiers.length !== 1 ? 's' : ''}`}
         />
 
         {canEdit && (
@@ -202,7 +208,33 @@ export default function TicketsPageClient({ canEdit }: { canEdit: boolean }) {
       </div>
 
       {/* Main Content Grid */}
-      {tiers.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="border-2 border-foreground/10 bg-secondary/10 p-6 flex flex-col justify-between h-48"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <Skeleton className="h-4 w-14 mb-2" />
+                    <Skeleton className="h-7 w-36" />
+                  </div>
+                  <Skeleton className="h-6 w-16" />
+                </div>
+                <div className="mt-6 space-y-2">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-28" />
+                    <Skeleton className="h-3 w-10" />
+                  </div>
+                  <Skeleton className="h-3 w-full" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : tiers.length === 0 ? (
         <EmptyState
           icon={<Ticket className="h-10 w-10" />}
           title="NO_TICKET_TIERS"

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import type { Event, TicketTier } from '@/lib/types'
 
@@ -37,36 +38,41 @@ export default function RegistrationsPage() {
   const [sendingReminder, setSendingReminder] = useState(false)
   const [acceptTarget, setAcceptTarget] = useState<Registration | null>(null)
   const [rejectTarget, setRejectTarget] = useState<Registration | null>(null)
+  const [loading, setLoading] = useState(true)
 
   async function loadData() {
-    const supabase = createClient()
-    const [{ data: attendees }, { data: ev }] = await Promise.all([
-      supabase
-        .from('attendees')
-        .select('*, ticket_tier:ticket_tiers(*)')
-        .eq('event_id', eventId)
-        .eq('source', 'public_registration')
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('events')
-        .select('*')
-        .eq('id', eventId)
-        .single(),
-    ])
+    try {
+      const supabase = createClient()
+      const [{ data: attendees }, { data: ev }] = await Promise.all([
+        supabase
+          .from('attendees')
+          .select('*, ticket_tier:ticket_tiers(*)')
+          .eq('event_id', eventId)
+          .eq('source', 'public_registration')
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('events')
+          .select('*')
+          .eq('id', eventId)
+          .single(),
+      ])
 
-    const mappedRegs = (attendees ?? []).map((a: any) => ({
-      id: a.id,
-      event_id: a.event_id,
-      full_name: a.name,
-      email: a.email,
-      phone: a.phone,
-      status: a.registration_status,
-      created_at: a.created_at,
-      ticket_tier: a.ticket_tier ?? null,
-    }))
+      const mappedRegs = (attendees ?? []).map((a: any) => ({
+        id: a.id,
+        event_id: a.event_id,
+        full_name: a.name,
+        email: a.email,
+        phone: a.phone,
+        status: a.registration_status,
+        created_at: a.created_at,
+        ticket_tier: a.ticket_tier ?? null,
+      }))
 
-    setRegistrations(mappedRegs as any[])
-    setEvent(ev)
+      setRegistrations(mappedRegs as any[])
+      setEvent(ev)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -188,7 +194,7 @@ export default function RegistrationsPage() {
         <SectionHeader
           eyebrow="PUBLIC_REGISTRATIONS"
           title="Registrations"
-          subtitle={`${counts.pending} pending · ${counts.accepted} accepted · ${counts.rejected} rejected · ${counts.waitlist} waitlist`}
+          subtitle={loading ? "Loading registrations..." : `${counts.pending} pending · ${counts.accepted} accepted · ${counts.rejected} rejected · ${counts.waitlist} waitlist`}
         />
 
         <div className="flex gap-2 shrink-0">
@@ -259,7 +265,31 @@ export default function RegistrationsPage() {
       </div>
 
       {/* Registrations list */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="border-2 border-foreground/10 overflow-hidden animate-pulse">
+          {/* Table header */}
+          <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] bg-secondary border-b-2 border-foreground/20 px-4 py-3 gap-4">
+            {['NAME', 'EMAIL / PHONE', 'STATUS', 'DATE', ''].map((h) => (
+              <span key={h} className="font-mono text-[9px] uppercase tracking-[0.2em] text-foreground/60">{h}</span>
+            ))}
+          </div>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="grid grid-cols-[1fr_1fr_auto_auto_auto] items-center px-4 py-4 gap-4 border-b border-foreground/5">
+              <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+              <Skeleton className="h-6 w-16 bg-foreground/5" />
+              <Skeleton className="h-4 w-12" />
+              <div className="h-8" />
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={<UserPlus className="h-10 w-10" />}
           title="NO_REGISTRATIONS"

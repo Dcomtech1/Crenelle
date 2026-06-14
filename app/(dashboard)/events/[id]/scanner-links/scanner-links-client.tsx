@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import type { ScannerLink } from '@/lib/types'
 
@@ -20,15 +21,20 @@ export default function ScannerLinksClient({ canManage }: { canManage: boolean }
   const [deleteTarget, setDeleteTarget] = useState<ScannerLink | null>(null)
   const [isPending, startTransition] = useTransition()
   const [isDeleting, startDeleteTransition] = useTransition()
+  const [loading, setLoading] = useState(true)
 
   async function loadLinks() {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('scanner_links')
-      .select('*')
-      .eq('event_id', eventId)
-      .order('created_at', { ascending: true })
-    setLinks(data ?? [])
+    try {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('scanner_links')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true })
+      setLinks(data ?? [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -78,7 +84,7 @@ export default function ScannerLinksClient({ canManage }: { canManage: boolean }
         <SectionHeader
           eyebrow="USHER_ACCESS_TOKENS"
           title="Scanner Links"
-          subtitle="Share these links with ushers — no login needed"
+          subtitle={loading ? "Loading scanner links..." : "Share these links with ushers — no login needed"}
         />
 
         {canManage ? (
@@ -124,7 +130,29 @@ export default function ScannerLinksClient({ canManage }: { canManage: boolean }
       </div>
 
       {/* Link list */}
-      {links.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col gap-3 animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-card border border-border p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between"
+            >
+              <div className="flex-1 space-y-2.5">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-5 w-16" />
+                </div>
+                <Skeleton className="h-3.5 w-64" />
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Skeleton className="h-9 w-16" />
+                <Skeleton className="h-9 w-24" />
+                <Skeleton className="h-9 w-10" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : links.length === 0 ? (
         <EmptyState
           icon={<Link2 className="h-10 w-10" />}
           title="NO_LINKS_YET"

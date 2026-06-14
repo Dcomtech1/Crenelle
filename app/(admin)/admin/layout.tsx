@@ -30,6 +30,16 @@ export default async function AdminLayout({
   if (!user) redirect('/login')
 
   // 2. Must be in the admin allow-list
+  //
+  // ⚠️  KNOWN LIMITATION: This is an email-based allowlist read from an env var.
+  //    Two weaknesses:
+  //      a) Adding/removing admins requires a redeploy.
+  //      b) If an admin changes their auth email address they silently lose access.
+  //
+  //    MIGRATION PATH: When ready, create an `admin_roles` table:
+  //      CREATE TABLE admin_roles (user_id uuid PRIMARY KEY REFERENCES auth.users(id));
+  //    Then check: SELECT 1 FROM admin_roles WHERE user_id = auth.uid()
+  //    This is keyed on the immutable user.id, not the mutable user.email.
   const adminEmails = (process.env.ADMIN_EMAILS ?? '')
     .split(',')
     .map((e) => e.trim().toLowerCase())

@@ -15,6 +15,7 @@ import type { Event } from '@/lib/types'
 import { EventBannerInput } from '@/components/event-banner-input'
 import { getOptimizedBannerUrl } from '@/lib/images'
 import { EventStatusBadge } from './event-status-badge'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function EventOverviewPage() {
   const { id } = useParams<{ id: string }>()
@@ -92,8 +93,56 @@ export default function EventOverviewPage() {
   }, [id])
 
   if (!event) return (
-    <div className="font-mono text-xs uppercase text-foreground/60 tracking-widest py-12 text-center animate-pulse">
-      LOADING_EVENT_DATA...
+    <div className="max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-pulse">
+      {/* Left Column Skeleton */}
+      <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+        <div className="brutalist-card">
+          {/* Card header */}
+          <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-foreground/20">
+            <Skeleton className="h-4 w-28" />
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-9 w-16" />
+              <Skeleton className="h-9 w-20" />
+            </div>
+          </div>
+
+          {/* Data rows skeleton */}
+          <div className="flex flex-col gap-6">
+            {[
+              { label: "EVENT_NAME", width: "w-3/4 h-8" },
+              { label: "EVENT_TYPE", width: "w-24 h-5" },
+              { label: "DATE", width: "w-48 h-5" },
+              { label: "TIME", width: "w-36 h-5" },
+              { label: "VENUE", width: "w-56 h-5" },
+              { label: "CAPACITY", width: "w-28 h-5" },
+              { label: "STATUS", width: "w-24 h-6" },
+              { label: "DESCRIPTION", width: "w-full h-12" },
+            ].map((row, i) => (
+              <div key={i} className="flex flex-col sm:flex-row sm:gap-6">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-foreground/70 sm:w-36 shrink-0 mb-1 sm:mb-0 sm:pt-1">
+                  {row.label}
+                </div>
+                <div className="flex-1">
+                  <Skeleton className={row.width} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column (Banner frame) Skeleton */}
+      <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+        <div className="brutalist-card p-0 overflow-hidden">
+          <div className="border-b-2 border-foreground/20 p-4 bg-foreground/5">
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <div className="aspect-video w-full bg-foreground/5 p-6 flex items-center justify-center">
+            <Skeleton className="w-full h-full" />
+          </div>
+        </div>
+      </div>
     </div>
   )
 

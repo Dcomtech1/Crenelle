@@ -22,10 +22,9 @@ export function SettingsSidebar() {
     },
     {
       label: 'General',
-      href: '#',
+      href: '/settings/general',
       icon: Sliders,
-      disabled: true,
-      badge: 'Soon'
+      disabled: false,
     },
   ]
 
@@ -44,17 +43,10 @@ export function SettingsSidebar() {
               return (
                 <div
                   key={item.label}
-                  className="flex items-center justify-between px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground/45 border-l border-transparent select-none cursor-not-allowed whitespace-nowrap shrink-0"
+                  className="flex items-center gap-2 px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground/45 border-l border-transparent select-none cursor-not-allowed whitespace-nowrap shrink-0"
                 >
-                  <span className="flex items-center gap-2">
-                    <Icon className="size-3.5" aria-hidden="true" />
-                    {item.label}
-                  </span>
-                  {item.badge && (
-                    <span className="hidden md:inline font-sans text-[8px] font-semibold tracking-normal border border-border/40 text-muted-foreground/30 px-1.5 py-0.5">
-                      {item.badge}
-                    </span>
-                  )}
+                  <Icon className="size-3.5" aria-hidden="true" />
+                  {item.label}
                 </div>
               )
             }

@@ -137,3 +137,19 @@ export interface EventMember {
   member_email?: string
   member_name?: string
 }
+
+export type DateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD'
+export type ClockFormat = '12h' | '24h'
+
+export interface OrganizerSettings {
+  id: string
+  organizer_id: string
+  org_name: string | null
+  default_timezone: string
+  default_currency: string
+  date_format: DateFormat
+  clock_format: ClockFormat
+  email_footer: string | null
+  created_at: string
+  updated_at: string
+}

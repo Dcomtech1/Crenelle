@@ -24,7 +24,7 @@ export function EmptyState({
     >
       {/* Visual background pattern */}
       <div 
-        className="absolute inset-0 bg-[radial-gradient(rgba(120,120,120,0.12)_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" 
+        className="absolute inset-0 bg-[radial-gradient(rgba(120,120,120,0.12)_1px,transparent_1px)] bg-size-[16px_16px] pointer-events-none" 
       />
 
       {icon && (

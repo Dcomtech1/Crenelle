@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { useParams } from 'next/navigation'
-import { Plus, Pencil, X, Users, Lock } from 'lucide-react'
+import { Plus, Pencil, X, Users, Lock, Download } from 'lucide-react'
 import { addAttendee, updateAttendee, cancelAttendeeInvitation, addMultipleAttendees, updateAttendeeTicketTier } from '@/app/actions/attendees'
 import { createClient } from '@/lib/supabase/client'
 import { fieldCls, labelCls, hintCls } from '@/lib/form-styles'
@@ -31,6 +31,69 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSavingTier, setIsSavingTier] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const exportToCSV = () => {
+    if (guests.length === 0) {
+      toast.error('No guests to export')
+      return
+    }
+
+    const headers = [
+      'Name',
+      'Email',
+      'Phone',
+      'Ticket Tier',
+      'Ticket Price',
+      'Status',
+      'Party Size',
+      'Seat Info',
+      'Registered At',
+      'Checked In At',
+      'Checked In By'
+    ]
+
+    const escapeCSV = (val: string | number | null | undefined): string => {
+      if (val === null || val === undefined) return ''
+      const str = String(val)
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const rows = guests.map(g => [
+      escapeCSV(g.name),
+      escapeCSV(g.email),
+      escapeCSV(g.phone),
+      escapeCSV(g.invitation?.ticket_tier?.name ?? 'No Tier'),
+      escapeCSV(
+        g.invitation?.ticket_tier?.price
+          ? `${g.invitation.ticket_tier.currency ?? 'NGN'} ${(g.invitation.ticket_tier.price / 100).toFixed(2)}`
+          : 'Free'
+      ),
+      escapeCSV(g.invitation?.status ?? 'pending'),
+      escapeCSV(g.invitation?.party_size ?? 1),
+      escapeCSV(g.invitation?.seat_info),
+      escapeCSV(g.created_at ? new Date(g.created_at).toISOString() : ''),
+      escapeCSV(g.invitation?.checked_in_at ? new Date(g.invitation.checked_in_at).toISOString() : ''),
+      escapeCSV(g.invitation?.checked_in_by)
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `guests-${eventId}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   async function loadGuests() {
     const supabase = createClient()
@@ -168,43 +231,54 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
           subtitle={loading ? "Loading guests..." : `${guests.length} guest${guests.length !== 1 ? 's' : ''} · ${totalSeats} total seats`}
         />
 
-        {canEdit ? (
-          <Dialog open={addOpen} onOpenChange={setAddOpen}>
-            <DialogTrigger asChild>
-              <Button variant="signal" className="gap-2 h-12 px-6 text-sm shrink-0">
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                ADD_GUEST
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-background border-2 border-foreground/20 max-w-md">
-              <DialogHeader>
-                <DialogTitle className="font-display text-3xl uppercase text-foreground">Add Guests</DialogTitle>
-              </DialogHeader>
-              <Tabs defaultValue="single" className="w-full mt-2">
-                <TabsList variant="line" className="border-b-2 border-foreground/10 w-full justify-start mb-4">
-                  <TabsTrigger value="single" className="font-mono text-xs uppercase tracking-widest px-4 py-2 border-b-2 border-transparent data-[state=active]:border-signal">
-                    Single Guest
-                  </TabsTrigger>
-                  <TabsTrigger value="bulk" className="font-mono text-xs uppercase tracking-widest px-4 py-2 border-b-2 border-transparent data-[state=active]:border-signal">
-                    Multiple Guests
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="single" className="mt-0">
-                  <GuestForm onSubmit={handleAdd} loading={isSaving} prefix="add" tiers={tiers} />
-                </TabsContent>
-                <TabsContent value="bulk" className="mt-0">
-                  <BulkGuestForm onSubmit={handleBulkAdd} loading={isSaving} />
-                </TabsContent>
-              </Tabs>
-            </DialogContent>
-          </Dialog>
-        ) : (
-          /* Read-only indicator for co-hosts */
-          <span className="inline-flex items-center gap-1.5 font-sans text-[10px] font-semibold uppercase tracking-widest text-muted-foreground border border-border px-3 py-2">
-            <Lock className="h-3 w-3" aria-hidden="true" />
-            READ-ONLY
-          </span>
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          <Button
+            onClick={exportToCSV}
+            variant="primary"
+            className="gap-2 h-12 px-6 text-sm shrink-0"
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            EXPORT_CSV
+          </Button>
+
+          {canEdit ? (
+            <Dialog open={addOpen} onOpenChange={setAddOpen}>
+              <DialogTrigger asChild>
+                <Button variant="signal" className="gap-2 h-12 px-6 text-sm shrink-0">
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  ADD_GUEST
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-background border-2 border-foreground/20 max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="font-display text-3xl uppercase text-foreground">Add Guests</DialogTitle>
+                </DialogHeader>
+                <Tabs defaultValue="single" className="w-full mt-2">
+                  <TabsList variant="line" className="border-b-2 border-foreground/10 w-full justify-start mb-4">
+                    <TabsTrigger value="single" className="font-mono text-xs uppercase tracking-widest px-4 py-2 border-b-2 border-transparent data-[state=active]:border-signal">
+                      Single Guest
+                    </TabsTrigger>
+                    <TabsTrigger value="bulk" className="font-mono text-xs uppercase tracking-widest px-4 py-2 border-b-2 border-transparent data-[state=active]:border-signal">
+                      Multiple Guests
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="single" className="mt-0">
+                    <GuestForm onSubmit={handleAdd} loading={isSaving} prefix="add" tiers={tiers} />
+                  </TabsContent>
+                  <TabsContent value="bulk" className="mt-0">
+                    <BulkGuestForm onSubmit={handleBulkAdd} loading={isSaving} />
+                  </TabsContent>
+                </Tabs>
+              </DialogContent>
+            </Dialog>
+          ) : (
+            /* Read-only indicator for co-hosts */
+            <span className="inline-flex items-center gap-1.5 font-sans text-[10px] font-semibold uppercase tracking-widest text-muted-foreground border border-border px-3 py-2 h-12 shrink-0">
+              <Lock className="h-3 w-3" aria-hidden="true" />
+              READ-ONLY
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Guest list */}

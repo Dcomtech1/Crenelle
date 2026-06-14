@@ -8,6 +8,7 @@ import {
 } from '@/app/actions/sender-profiles'
 import { ProfileForm } from './profile-form'
 import { ProfileActions } from './profile-actions'
+import { EmptyState } from '@/components/empty-state'
 
 export const metadata = {
   title: 'Sender Profiles — Crenelle',
@@ -74,13 +75,12 @@ export default async function SenderProfilesPage() {
 
       {/* ── Empty state ── */}
       {list.length === 0 && (
-        <div className="mb-8 py-12 text-center border border-dashed border-border">
-          <Mail className="size-6 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
-          <p className="font-sans text-sm text-muted-foreground">No sender profiles yet</p>
-          <p className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider mt-1">
-            Create one below to get started
-          </p>
-        </div>
+        <EmptyState
+          icon={<Mail className="h-10 w-10" />}
+          title="NO_SENDER_PROFILES"
+          subtitle="Create a sender profile below to define your organization's sending display name and reply-to email"
+          className="mb-8"
+        />
       )}
 
       {/* ── Create new profile ── */}

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { Printer, QrCode } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/empty-state'
 import QRCode from 'qrcode'
 import type { Attendee, Invitation, Event } from '@/lib/types'
 
@@ -57,13 +58,11 @@ export default function CardsPage() {
 
   if (cards.length === 0) {
     return (
-      <div className="py-20 border-2 border-dashed border-foreground/20 flex flex-col items-center justify-center text-center">
-        <QrCode className="h-10 w-10 text-foreground/20 mb-4" aria-hidden="true" />
-        <p className="font-display text-2xl uppercase text-foreground/50 mb-1">NO_GUESTS_ADDED_YET</p>
-        <p className="font-mono text-xs text-foreground/50 uppercase tracking-widest">
-          Add guests first, then return here to generate their QR entry cards
-        </p>
-      </div>
+      <EmptyState
+        icon={<QrCode className="h-10 w-10" />}
+        title="NO_GUESTS_ADDED_YET"
+        subtitle="Add guests first, then return here to generate their QR entry cards"
+      />
     )
   }
 

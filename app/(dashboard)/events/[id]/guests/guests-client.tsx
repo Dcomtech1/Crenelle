@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import type { Invitation, Attendee, TicketTier } from '@/lib/types'
 
@@ -29,6 +30,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSavingTier, setIsSavingTier] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   async function loadGuests() {
     const supabase = createClient()
@@ -55,8 +57,14 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
   useEffect(() => {
     const supabase = createClient()
 
-    loadGuests()
-    loadTiers()
+    async function init() {
+      try {
+        await Promise.all([loadGuests(), loadTiers()])
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
 
     const poll = setInterval(() => { loadGuests(); loadTiers() }, 10000)
 
@@ -157,7 +165,7 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
         <SectionHeader
           eyebrow="GUEST_MANIFEST"
           title="Guest List"
-          subtitle={`${guests.length} guest${guests.length !== 1 ? 's' : ''} · ${totalSeats} total seats`}
+          subtitle={loading ? "Loading guests..." : `${guests.length} guest${guests.length !== 1 ? 's' : ''} · ${totalSeats} total seats`}
         />
 
         {canEdit ? (
@@ -200,7 +208,28 @@ export default function GuestsPageClient({ canEdit }: { canEdit: boolean }) {
       </div>
 
       {/* Guest list */}
-      {guests.length === 0 ? (
+      {loading ? (
+        <div className="border-2 border-foreground/10 overflow-hidden animate-pulse">
+          {/* Table header */}
+          <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] bg-secondary border-b-2 border-foreground/20 px-4 py-3 gap-4">
+            {['NAME', 'CONTACT', 'PARTY', 'SEAT', ''].map((h) => (
+              <span key={h} className="font-mono text-[9px] uppercase tracking-[0.2em] text-foreground/60">{h}</span>
+            ))}
+          </div>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="grid grid-cols-[1fr_1fr_auto_auto_auto] items-center px-4 py-4 gap-4 border-b border-foreground/5">
+              <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-6 w-8 bg-foreground/5" />
+              <Skeleton className="h-4 w-12" />
+              <div className="h-8" />
+            </div>
+          ))}
+        </div>
+      ) : guests.length === 0 ? (
         <EmptyState
           icon={<Users className="h-10 w-10" />}
           title="NO_GUESTS_YET"

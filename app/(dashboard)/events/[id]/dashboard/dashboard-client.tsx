@@ -6,6 +6,7 @@ import { Users, UserCheck, Clock, BarChart3, DoorOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { StatCard } from '@/components/stat-card'
 import { SectionHeader } from '@/components/section-header'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { EntryLog, Invitation, Attendee } from '@/lib/types'
 
 type EntryWithGuest = {
@@ -39,102 +40,107 @@ export default function LiveDashboardPage() {
   const [entries, setEntries] = useState<EntryWithGuest[]>([])
   const [pending, setPending] = useState<Array<{ name: string; party_size: number; seat_info: string | null }>>([])
   const [entranceStats, setEntranceStats] = useState<Array<{ label: string; count: number }>>([])  
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const supabase = createClient()
 
     async function loadData() {
-      const { data: invitations } = await supabase
-        .from('invitations')
-        .select('id, party_size, seat_info, status, attendee:attendees(name)')
-        .eq('event_id', eventId)
+      try {
+        const { data: invitations } = await supabase
+          .from('invitations')
+          .select('id, party_size, seat_info, status, attendee:attendees(name)')
+          .eq('event_id', eventId)
 
-      const { data: logs } = await supabase
-        .from('entry_logs')
-        .select('id, scanned_at, invitation:invitations(id, party_size, seat_info, attendee:attendees(name))')
-        .in('invitation_id', (invitations ?? []).map(i => i.id))
-        .order('scanned_at', { ascending: false })
-
-      const logsArr = (logs ?? []) as any[]
-      const invArrRaw = (invitations ?? []) as any[]
-
-      const invArr: InvitationRaw[] = invArrRaw.map(i => {
-        const att = Array.isArray(i.attendee) ? i.attendee[0] : i.attendee
-        return {
-          id: i.id,
-          party_size: i.party_size,
-          seat_info: i.seat_info,
-          status: i.status,
-          guest: att ? { name: att.name } : { name: 'Unknown' }
-        }
-      })
-
-      const logsPerInv = new Map<string, number>()
-      logsArr.forEach((l) => {
-        const invRaw = Array.isArray(l.invitation) ? l.invitation[0] : l.invitation
-        const invId = invRaw?.id
-        if (invId) logsPerInv.set(invId, (logsPerInv.get(invId) ?? 0) + 1)
-      })
-
-      setTotalInvited(invArr.length)
-      setTotalSeats(invArr.reduce((a, i) => a + (i.party_size ?? 1), 0))
-      setArrived(logsArr.length)
-      setArrivedSeats(logsPerInv.size)
-      setEntries(logsArr.map(l => {
-        const invRaw = Array.isArray(l.invitation) ? l.invitation[0] : l.invitation
-        const attRaw = invRaw ? (Array.isArray(invRaw.attendee) ? invRaw.attendee[0] : invRaw.attendee) : null
-        return {
-          id: l.id,
-          scanned_at: l.scanned_at,
-          invitation: {
-            party_size: invRaw?.party_size ?? 1,
-            seat_info:  invRaw?.seat_info ?? null,
-            guest:      attRaw ?? { name: 'Unknown' }
-          }
-        }
-      }))
-      setPending(
-        invArr
-          .map((i) => {
-            const arrivedInParty   = logsPerInv.get(i.id) ?? 0
-            const remainingInParty = (i.party_size ?? 1) - arrivedInParty
-            return { ...i, remainingInParty }
-          })
-          .filter((i) => i.remainingInParty > 0)
-          .map((i) => {
-            return {
-              name:       i.guest?.name ?? 'Unknown',
-              party_size: i.remainingInParty,
-              seat_info:  i.seat_info
-            }
-          })
-      )
-
-      // --- Per-entrance breakdown ---
-      const { data: scanLinks } = await supabase
-        .from('scanner_links')
-        .select('id, label')
-        .eq('event_id', eventId)
-
-      if (scanLinks && scanLinks.length > 0) {
-        const linkIds = scanLinks.map((sl) => sl.id)
-        const { data: entranceLogs } = await supabase
+        const { data: logs } = await supabase
           .from('entry_logs')
-          .select('scanner_link_id')
-          .in('scanner_link_id', linkIds)
+          .select('id, scanned_at, invitation:invitations(id, party_size, seat_info, attendee:attendees(name))')
+          .in('invitation_id', (invitations ?? []).map(i => i.id))
+          .order('scanned_at', { ascending: false })
 
-        const countByLink = new Map<string, number>()
-        ;(entranceLogs ?? []).forEach((el) => {
-          if (el.scanner_link_id) {
-            countByLink.set(el.scanner_link_id, (countByLink.get(el.scanner_link_id) ?? 0) + 1)
+        const logsArr = (logs ?? []) as any[]
+        const invArrRaw = (invitations ?? []) as any[]
+
+        const invArr: InvitationRaw[] = invArrRaw.map(i => {
+          const att = Array.isArray(i.attendee) ? i.attendee[0] : i.attendee
+          return {
+            id: i.id,
+            party_size: i.party_size,
+            seat_info: i.seat_info,
+            status: i.status,
+            guest: att ? { name: att.name } : { name: 'Unknown' }
           }
         })
 
-        setEntranceStats(
-          scanLinks
-            .map((sl) => ({ label: sl.label, count: countByLink.get(sl.id) ?? 0 }))
-            .sort((a, b) => b.count - a.count)
+        const logsPerInv = new Map<string, number>()
+        logsArr.forEach((l) => {
+          const invRaw = Array.isArray(l.invitation) ? l.invitation[0] : l.invitation
+          const invId = invRaw?.id
+          if (invId) logsPerInv.set(invId, (logsPerInv.get(invId) ?? 0) + 1)
+        })
+
+        setTotalInvited(invArr.length)
+        setTotalSeats(invArr.reduce((a, i) => a + (i.party_size ?? 1), 0))
+        setArrived(logsArr.length)
+        setArrivedSeats(logsPerInv.size)
+        setEntries(logsArr.map(l => {
+          const invRaw = Array.isArray(l.invitation) ? l.invitation[0] : l.invitation
+          const attRaw = invRaw ? (Array.isArray(invRaw.attendee) ? invRaw.attendee[0] : invRaw.attendee) : null
+          return {
+            id: l.id,
+            scanned_at: l.scanned_at,
+            invitation: {
+              party_size: invRaw?.party_size ?? 1,
+              seat_info:  invRaw?.seat_info ?? null,
+              guest:      attRaw ?? { name: 'Unknown' }
+            }
+          }
+        }))
+        setPending(
+          invArr
+            .map((i) => {
+              const arrivedInParty   = logsPerInv.get(i.id) ?? 0
+              const remainingInParty = (i.party_size ?? 1) - arrivedInParty
+              return { ...i, remainingInParty }
+            })
+            .filter((i) => i.remainingInParty > 0)
+            .map((i) => {
+              return {
+                name:       i.guest?.name ?? 'Unknown',
+                party_size: i.remainingInParty,
+                seat_info:  i.seat_info
+              }
+            })
         )
+
+        // --- Per-entrance breakdown ---
+        const { data: scanLinks } = await supabase
+          .from('scanner_links')
+          .select('id, label')
+          .eq('event_id', eventId)
+
+        if (scanLinks && scanLinks.length > 0) {
+          const linkIds = scanLinks.map((sl) => sl.id)
+          const { data: entranceLogs } = await supabase
+            .from('entry_logs')
+            .select('scanner_link_id')
+            .in('scanner_link_id', linkIds)
+
+          const countByLink = new Map<string, number>()
+          ;(entranceLogs ?? []).forEach((el) => {
+            if (el.scanner_link_id) {
+              countByLink.set(el.scanner_link_id, (countByLink.get(el.scanner_link_id) ?? 0) + 1)
+            }
+          })
+
+          setEntranceStats(
+            scanLinks
+              .map((sl) => ({ label: sl.label, count: countByLink.get(sl.id) ?? 0 }))
+              .sort((a, b) => b.count - a.count)
+          )
+        }
+      } finally {
+        setLoading(false)
       }
     }
 
@@ -156,6 +162,76 @@ export default function LiveDashboardPage() {
   }, [eventId])
 
   const arrivalRate = totalSeats > 0 ? Math.round((arrived / totalSeats) * 100) : 0
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-8 animate-pulse">
+        {/* Section header */}
+        <div className="border-b-2 border-foreground/20 pb-6">
+          <SectionHeader
+            eyebrow="REALTIME_FEED"
+            title="Live Attendance"
+            subtitle="Loading live dashboard data..."
+            live
+          />
+        </div>
+
+        {/* Stats grid skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-foreground/20">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-card p-5 space-y-3 border border-border">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-8 w-12" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+          ))}
+        </div>
+
+        {/* Capacity bar skeleton */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-end">
+            <Skeleton className="h-3.5 w-32" />
+            <Skeleton className="h-3.5 w-12" />
+          </div>
+          <Skeleton className="w-full h-5" />
+        </div>
+
+        {/* Recent + Pending columns skeleton */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Column 1 */}
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-32" />
+            <div className="space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex justify-between items-center p-3 border border-border bg-card">
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-3.5 w-1/4" />
+                  </div>
+                  <Skeleton className="h-6 w-8" />
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Column 2 */}
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-36" />
+            <div className="space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex justify-between items-center p-3 border border-border bg-card">
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-3.5 w-1/4" />
+                  </div>
+                  <Skeleton className="h-6 w-8" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-8">

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { SectionHeader } from '@/components/section-header'
 import { EmptyState } from '@/components/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import type { EventMember, MemberRole } from '@/lib/types'
 
@@ -44,14 +45,19 @@ export default function TeamPage() {
   const [isPending, startTransition] = useTransition()
   const [isRemoving, startRemoveTransition] = useTransition()
   const [isUpdatingRole, startUpdateTransition] = useTransition()
+  const [loading, setLoading] = useState(true)
 
   async function loadMembers() {
-    const result = await getTeamMembers(eventId)
-    if (result.error) {
-      // If this errors, the user is not the owner — access denied
-      return
+    try {
+      const result = await getTeamMembers(eventId)
+      if (result.error) {
+        // If this errors, the user is not the owner — access denied
+        return
+      }
+      setMembers(result.members)
+    } finally {
+      setLoading(false)
     }
-    setMembers(result.members)
   }
 
   useEffect(() => {
@@ -90,7 +96,7 @@ export default function TeamPage() {
         <SectionHeader
           eyebrow="TEAM_ACCESS"
           title="Co-Hosts"
-          subtitle={`${members.length} co-host${members.length !== 1 ? 's' : ''} with access to this event`}
+          subtitle={loading ? "Loading co-hosts..." : `${members.length} co-host${members.length !== 1 ? 's' : ''} with access to this event`}
         />
 
         <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
@@ -178,7 +184,30 @@ export default function TeamPage() {
       </div>
 
       {/* Members list */}
-      {members.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col gap-3 animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-card border border-border p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+            >
+              {/* Avatar circle placeholder */}
+              <div className="h-10 w-10 shrink-0 bg-foreground/5 border border-foreground/10" />
+              {/* Details placeholder */}
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-48" />
+                <Skeleton className="h-2.5 w-24" />
+              </div>
+              {/* Role selector placeholder */}
+              <div className="flex items-center gap-2 shrink-0">
+                <Skeleton className="h-8 w-28" />
+                <Skeleton className="h-8 w-8" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : members.length === 0 ? (
         <EmptyState
           icon={<Users className="h-10 w-10" />}
           title="NO_CO-HOSTS"

@@ -2,12 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { Users, UserCheck, Clock, BarChart3, DoorOpen } from 'lucide-react'
+import { Users, UserCheck, Clock, BarChart3, DoorOpen, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { StatCard } from '@/components/stat-card'
 import { SectionHeader } from '@/components/section-header'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { EntryLog, Invitation, Attendee } from '@/lib/types'
+import { Button } from '@/components/ui/button'
+import type { EntryLog, Invitation, Attendee, Event } from '@/lib/types'
+import dynamic from 'next/dynamic'
+import { EventSummaryReport } from '@/components/event-summary-pdf'
+
+const PDFDownloadLink = dynamic(
+  () => import('@react-pdf/renderer').then(mod => mod.PDFDownloadLink),
+  { ssr: false }
+)
 
 type EntryWithGuest = {
   id: string
@@ -41,12 +49,52 @@ export default function LiveDashboardPage() {
   const [pending, setPending] = useState<Array<{ name: string; party_size: number; seat_info: string | null }>>([])
   const [entranceStats, setEntranceStats] = useState<Array<{ label: string; count: number }>>([])  
   const [loading, setLoading] = useState(true)
+  const [event, setEvent] = useState<Event | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  const getPeakCheckInTime = (entriesList: EntryWithGuest[]) => {
+    if (entriesList.length === 0) return 'N/A'
+    const buckets: Record<string, number> = {}
+    entriesList.forEach(e => {
+      const date = new Date(e.scanned_at)
+      const hour = date.getHours()
+      const min = date.getMinutes()
+      const bucketStartMin = min < 30 ? '00' : '30'
+      const bucketEndHour = min < 30 ? hour : (hour + 1) % 24
+      const bucketEndMin = min < 30 ? '30' : '00'
+
+      const pad = (num: number) => String(num).padStart(2, '0')
+      const key = `${pad(hour)}:${bucketStartMin} - ${pad(bucketEndHour)}:${bucketEndMin}`
+      buckets[key] = (buckets[key] ?? 0) + 1
+    })
+
+    let maxCount = 0
+    let peakInterval = 'N/A'
+    Object.entries(buckets).forEach(([interval, count]) => {
+      if (count > maxCount) {
+        maxCount = count
+        peakInterval = `${interval} (${count} scan${count !== 1 ? 's' : ''})`
+      }
+    })
+    return peakInterval
+  }
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
 
     async function loadData() {
       try {
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', eventId)
+          .single()
+        setEvent(eventData)
+
         const { data: invitations } = await supabase
           .from('invitations')
           .select('id, party_size, seat_info, status, attendee:attendees(name)')
@@ -236,13 +284,60 @@ export default function LiveDashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       {/* Section header */}
-      <div className="border-b-2 border-foreground/20 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b-2 border-foreground/20 pb-6">
         <SectionHeader
           eyebrow="REALTIME_FEED"
           title="Live Attendance"
           subtitle="Updates in real-time as guests arrive"
           live
         />
+
+        {!isMounted || !event ? (
+          <Button
+            variant="primary"
+            className="gap-2 h-12 px-6 text-sm shrink-0 opacity-50 cursor-not-allowed"
+            disabled
+          >
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            SUMMARY_REPORT
+          </Button>
+        ) : (
+          <PDFDownloadLink
+            document={
+              <EventSummaryReport
+                event={event}
+                stats={{
+                  totalSeats,
+                  totalInvited,
+                  arrived,
+                  arrivedSeats,
+                  pendingSeats: totalSeats - arrived,
+                  arrivalRate,
+                  peakCheckInTime: getPeakCheckInTime(entries),
+                  entranceStats,
+                  recentEntries: entries.slice(0, 10).map(e => ({
+                    guestName: e.invitation.guest.name,
+                    seatInfo: e.invitation.seat_info,
+                    scannedAt: e.scanned_at,
+                    partySize: e.invitation.party_size
+                  }))
+                }}
+              />
+            }
+            fileName={`event-summary-${event.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf`}
+          >
+            {({ blob, url, loading: pdfLoading, error }) => (
+              <Button
+                variant="primary"
+                className="gap-2 h-12 px-6 text-sm shrink-0"
+                disabled={pdfLoading}
+              >
+                <FileText className="h-4 w-4" aria-hidden="true" />
+                {pdfLoading ? 'GENERATING...' : 'SUMMARY_REPORT'}
+              </Button>
+            )}
+          </PDFDownloadLink>
+        )}
       </div>
 
       {/* Stats grid */}
